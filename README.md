@@ -316,4 +316,3 @@ MIT License — see [LICENSE](LICENSE) for details.
 - **BrakTooth** (2021) — Bluetooth SoC fuzzing methodology
 - **WhisperPair** (2025) — Pairing security analysis inspiration
 - **Airoha RACE** — Parallel vendor SPP vulnerability
-```
