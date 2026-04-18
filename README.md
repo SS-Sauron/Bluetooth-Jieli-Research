@@ -13,7 +13,7 @@
 ## 📑 Table of Contents
 
 - [Overview](#-overview)
-- [Target Device](#-target-device)
+- [Target Device](#-target-device)https://github.com/SS-Sauron/Bluetooth-Jieli-Research/blob/main/README.md
 - [Key Findings](#-key-findings)
 - [Detailed Attack Matrix](#-detailed-attack-matrix)
 - [Example Outputs](#-example-outputs)
