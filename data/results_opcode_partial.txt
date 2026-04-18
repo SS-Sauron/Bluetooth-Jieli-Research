@@ -1,0 +1,40 @@
+[*] Connecting to RFCOMM channel 1 on F4:B6:2D:AE:AB:E0...
+[+] Connected.
+
+Opcode 0x00: 0110ea1e4ef2c3439214305c61f78af580 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x01: 01141fb713fcf29f14cf5fd37db5378471 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x02: 01aa933ca951e184c8ebfe8e68e9ad5703 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x03: 019210e8a9332c7f2d7238a68b5f5e46cc (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x04: 0174fc825d6bad17bc643d6c05237b26a4 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x05: 01e1b291772b136ced0718060d84064a31 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x06: 0174ada7189dfd636a78a23e6b26c3b3c4 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x07: 014c37dd345a2133c5bf6009970eb7f25d (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x08: 01162a3b61692e4b3569da127be440919a (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x09: 015061744c46640477eed8e37bd8e5d317 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x0A: 0106dbf224aac3bf4fe32efbc931838225 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x0B: 01f3d82a8d708f732349d5743ff572993f (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x0C: 01975d3c114b08eecb58ec8fbd654cca50 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x0D: 0126e20e948e5b0d8bb43652fa946905b1 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x0E: 01c47a774e1eef4bc3f485ea47cdae91de (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x0F: 01ca5851b6397a539fd9579ffb346bcb71 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x10: 01518b7cb6fc0e01e82cd2ad5c56bcbb32 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x11: 01961668d684caa5e87b79b89f80f03155 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x12: 0111902c32a7349fd14e1be9911a0cb2cd (len=17)

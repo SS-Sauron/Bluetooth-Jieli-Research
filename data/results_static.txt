@@ -1,0 +1,12 @@
+0x10: 0748fec588e988fcdd7eb1083097f51c
+     ASCII: .H.......~..0...
+0x20: 586292319f0271613ef22de39adc529e
+     ASCII: Xb.1..qa>.-...R.
+0x30: 9939ed7c5f57a54988a4cda0494192d3
+     ASCII: .9.|_W.I....IA..
+0x40: d5dd756f68e5bf4722f13046767056e0
+     ASCII: ..uoh..G".0FvpV.
+0x47: 5c10407be84e00c6fe5caa16149ac221
+     ASCII: \.@{.N...\.....!
+0x6F: 4edce35989e28d5ca7bfbbc0daf4ed63
+     ASCII: N..Y...\.......c

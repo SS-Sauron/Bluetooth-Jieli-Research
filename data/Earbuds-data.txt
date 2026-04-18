@@ -1,0 +1,146 @@
+graves@andrew-machine:~/BlueToolkit$ hcitool scan
+Scanning ...
+	F4:B6:2D:AE:AB:E0	soundcore R50i NC
+graves@andrew-machine:~/BlueToolkit$ hcitool inq
+Inquiring ...
+	F4:B6:2D:AE:AB:E0	clock offset: 0x11e6	class: 0x240404
+graves@andrew-machine:~/BlueToolkit$ hcitool info B0:19:21:16:9E:BA
+Requesting information ...
+Can't create connection: Operation not permitted
+graves@andrew-machine:~/BlueToolkit$ sudo hcitool info B0:19:21:16:9E:BA
+Requesting information ...
+Can't create connection: Input/output error
+graves@andrew-machine:~/BlueToolkit$ sdptool browse F4:B6:2D:AE:AB:E0
+Browsing F4:B6:2D:AE:AB:E0 ...
+graves@andrew-machine:~/BlueToolkit$ sudo l2ping -c 3 F4:B6:2D:AE:AB:E0
+Ping: F4:B6:2D:AE:AB:E0 from B0:19:21:16:9E:BA (data size 44) ...
+no response from F4:B6:2D:AE:AB:E0: id 0
+no response from F4:B6:2D:AE:AB:E0: id 1
+no response from F4:B6:2D:AE:AB:E0: id 2
+3 sent, 0 received, 100% loss
+graves@andrew-machine:~/BlueToolkit$ sudo sdptool --nobredr browse F4:B6:2D:AE:AB:E0
+sdptool: unrecognized option '--nobredr'
+graves@andrew-machine:~/BlueToolkit$ sudo sdptool records F4:B6:2D:AE:AB:E0
+Service Name: JL_A2DP
+Service RecHandle: 0x10001
+Service Class ID List:
+  "Audio Sink" (0x110b)
+Protocol Descriptor List:
+  "L2CAP" (0x0100)
+    PSM: 25
+  "AVDTP" (0x0019)
+    uint16: 0x0103
+Profile Descriptor List:
+  "Advanced Audio" (0x110d)
+    Version: 0x0103
+
+Service RecHandle: 0x10002
+Service Class ID List:
+  "AV Remote" (0x110e)
+  "AV Remote Controller" (0x110f)
+Protocol Descriptor List:
+  "L2CAP" (0x0100)
+    PSM: 23
+  "AVCTP" (0x0017)
+    uint16: 0x0104
+Profile Descriptor List:
+  "AV Remote" (0x110e)
+    Version: 0x0106
+
+Service Name: JL_HFP
+Service RecHandle: 0x10003
+Service Class ID List:
+  "Handsfree" (0x111e)
+  "Generic Audio" (0x1203)
+Protocol Descriptor List:
+  "L2CAP" (0x0100)
+  "RFCOMM" (0x0003)
+    Channel: 4
+Profile Descriptor List:
+  "Handsfree" (0x111e)
+    Version: 0x0108
+
+Service Name: JL_SPP
+Service RecHandle: 0x10004
+Service Class ID List:
+  "Serial Port" (0x1101)
+Protocol Descriptor List:
+  "L2CAP" (0x0100)
+  "RFCOMM" (0x0003)
+    Channel: 1
+Profile Descriptor List:
+  "Serial Port" (0x1101)
+    Version: 0x0102
+
+Service RecHandle: 0x10005
+Service Class ID List:
+  "AV Remote Target" (0x110c)
+Protocol Descriptor List:
+  "L2CAP" (0x0100)
+    PSM: 23
+  "AVCTP" (0x0017)
+    uint16: 0x0104
+Profile Descriptor List:
+  "AV Remote" (0x110e)
+    Version: 0x0105
+
+Service Name: JL_HID
+Service Description: hid key
+Service RecHandle: 0x10006
+Service Class ID List:
+  "Human Interface Device" (0x1124)
+Protocol Descriptor List:
+  "L2CAP" (0x0100)
+    PSM: 17
+  "HIDP" (0x0011)
+Profile Descriptor List:
+  "Human Interface Device" (0x1124)
+    Version: 0x0100
+
+Service RecHandle: 0x1000a
+Service Class ID List:
+  "PnP Information" (0x1200)
+
+Service Name: JL_SPP
+Service RecHandle: 0x10011
+Service Class ID List:
+  UUID 128: 0cf12d31-fac3-4553-bd80-d6832e7b395b
+Protocol Descriptor List:
+  "L2CAP" (0x0100)
+  "RFCOMM" (0x0003)
+    Channel: 10
+Profile Descriptor List:
+  "" (0x0cf12d31-fac3-4553-bd80-d6832e7b395b)
+    Version: 0x0100
+
+graves@andrew-machine:~/BlueToolkit$ hcitool scan
+Scanning ...
+graves@andrew-machine:~/BlueToolkit$ hcitool scan
+Scanning ...
+	F4:B6:2D:AE:AB:E0	soundcore R50i NC
+graves@andrew-machine:~/BlueToolkit$ sdptool browse F4:B6:2D:AE:AB:E0
+Browsing F4:B6:2D:AE:AB:E0 ...
+graves@andrew-machine:~/BlueToolkit$ bluetoothctl
+Waiting to connect to bluetoothd...[bluetooth]# hci0 new_settings: powered bondable ssp br/edr le secure-conn 
+[bluetooth]# Agent registered
+[bluetooth]# [CHG] Controller B0:19:21:16:9E:BA Pairable: yes
+[bluetooth]# scan on
+[bluetooth]# SetDiscoveryFilter success
+[bluetooth]# Discovery started
+[bluetooth]# [CHG] Controller B0:19:21:16:9E:BA Discovering: yes
+[blueF4:B6:2D:AE:AB:E06:2D:AE:AB:E0
+Device F4:B6:2D:AE:AB:E0 (public)
+	Name: soundcore R50i NC
+	Alias: soundcore R50i NC
+	Class: 0x00240404 (2360324)
+	Icon: audio-headset
+	Paired: no
+	Bonded: no
+	Trusted: no
+	Blocked: no
+	Connected: no
+	LegacyPairing: no
+[bluetooth]# [DEL] Device F4:B6:2D:AE:AB:E0 soundcore R50i NC
+[bluetooth]# 
+
+

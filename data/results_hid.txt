@@ -1,0 +1,14 @@
+[*] Trying HID Control channel (PSM 17)...
+[+] Connected to HID Control.
+
+[>] Sending HID report: 01cd000000
+[>] Sending HID report: 0100000000
+[+] Done.
+
+[*] Trying HID Interrupt channel (PSM 19)...
+[+] Connected to HID Interrupt.
+
+[>] Sending HID report: 01cd000000
+[>] Sending HID report: 0100000000
+[+] Done.
+

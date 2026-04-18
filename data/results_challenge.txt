@@ -1,0 +1,13 @@
+Iteration 1: 360f7e7a8d591fd87492422865de61da
+Iteration 2: 58d4282b13852aabca99727a9b41233e
+Traceback (most recent call last):
+  File "<string>", line 3, in connect
+_bluetooth.error: (104, 'Connection reset by peer')
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/graves/Bluetooth-Jieli-Testing/jl_challenge_repeat.py", line 9, in <module>
+    sock.connect((TARGET, 1))
+  File "<string>", line 5, in connect
+bluetooth.btcommon.BluetoothError: [Errno 104] Connection reset by peer

@@ -1,0 +1,18 @@
+[*] Connecting to RFCOMM channel 1...
+[+] Connected to channel 1.
+[>] Sending opcode 0x00: 00000000
+[<] Response: 01ad8404fd38a257701ea84a558f2665d9 (len=17)
+[*] Extracted challenge: ad8404fd38a257701ea84a558f2665d9
+
+[*] Connecting to RFCOMM channel 10...
+Traceback (most recent call last):
+  File "<string>", line 3, in connect
+_bluetooth.error: (104, 'Connection reset by peer')
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/graves/Bluetooth-Jieli-Testing/jl_cross_channel_auth.py", line 35, in <module>
+    sock10.connect((TARGET, 10))
+  File "<string>", line 5, in connect
+bluetooth.btcommon.BluetoothError: [Errno 104] Connection reset by peer

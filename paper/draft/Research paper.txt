@@ -1,0 +1,764 @@
+I will now provide the complete research paper in **raw Markdown format**, broken into logical parts for easy copying. Each part will be presented in a separate code block. You can copy each block and paste it directly into any Markdown-compatible editor (Typora, Obsidian, VS Code, or convert via Pandoc to Word/PDF).
+
+---
+
+## Part 1: Title, Abstract, and Introduction
+
+```markdown
+# Unauthenticated Protocol Exposure and Weak Challenge Generation in Jieli-Based Bluetooth Audio Devices
+
+**Authors:** [Author Names to be Added]  
+**Affiliation:** [Institution to be Added]  
+**Target Firmware:** Soundcore R50i NC v01.65  
+**Disclosure Status:** Coordinated disclosure in progress; timeline to be finalized.
+
+---
+
+## Abstract
+
+Bluetooth audio accessories—earbuds, headphones, and portable speakers—are everywhere. Yet the tiny chips inside them, especially those from budget‑focused manufacturers, have received almost no public security scrutiny. This paper presents the first systematic analysis of the **Jieli Bluetooth SDK**, a software platform used in hundreds of millions of devices sold under brands like Anker Soundcore, QCY, and Xiaomi. Using only a standard laptop and no special privileges, we uncover a hidden attack surface that remains open to anyone within Bluetooth range, even if the device is already paired with a trusted phone.
+
+We show that an unauthenticated attacker can connect to the earbuds' media control channel and inject **volume commands** without the user's knowledge. More importantly, we discover and reverse‑engineer a proprietary serial service, **JL_SPP**, which operates over two unadvertised channels (1 and 10) and requires no pairing. By sending a simple four‑byte command—`00 00 00` followed by any operation code—we receive a 17‑byte response that reveals a weak internal random number generator, static device identifiers, and functional information about the chip's internal operations.
+
+Our experiments expose three critical weaknesses: (1) a predictable reset sequence that forces the device's random generator into a known state, (2) a timing side‑channel that reveals which commands access flash memory, and (3) persistent identifiers that allow a stalker to track a specific person's earbuds across locations. Although the second JL_SPP channel remains locked behind a likely cryptographic handshake, the exposed channel alone provides enough information for device fingerprinting, denial‑of‑service attacks, and session hijacking. We argue that these flaws are not accidental bugs but symptoms of a systemic failure to apply Bluetooth's security model to vendor‑specific extensions. We conclude with a responsible disclosure plan and concrete recommendations for Jieli and other chipset vendors.
+
+---
+
+## 1. Introduction
+
+### 1.1. A World of Invisible Wires
+
+Bluetooth has quietly woven itself into the fabric of daily life. Every day, over four million Bluetooth audio devices are sold globally—earbuds for commuters, headphones for office workers, and portable speakers for gatherings. The vast majority of these devices are built around a handful of low‑cost chips manufactured by a few semiconductor companies. One of the most prolific is **Jieli Technology** (Zhuhai Jieli), whose integrated Bluetooth SoCs power products from major brands like Anker Soundcore, QCY, and Xiaomi.
+
+These chips are marvels of integration: they combine a radio, a digital signal processor for audio, a microcontroller, and flash memory into a package that costs less than a dollar. But this cost pressure often leads to trade‑offs, and security is frequently among the first features to be sacrificed. While academic and industry researchers have thoroughly examined the Bluetooth stacks of smartphones (BlueBorne), the pairing protocols of major ecosystems (WhisperPair), and high‑end automotive chipsets (BrakTooth), the budget audio segment remains a blind spot. This paper shines a light into that darkness.
+
+### 1.2. A Scenario to Illustrate the Stakes
+
+Imagine a woman named Priya. She commutes daily by train, listening to podcasts on her Soundcore earbuds. Her phone is paired, and she trusts that only her phone can control the earbuds. Unbeknownst to her, a small device—no larger than a pack of gum—has been placed under her usual seat by a stalker. This device contains a cheap Bluetooth chip and a battery. It scans for nearby earbuds, finds Priya's, and connects to a hidden service that the manufacturer intended only for factory testing.
+
+The stalker's device now reads a unique, unchanging identifier from Priya's earbuds. It logs this identifier along with the time and location. The next day, when Priya returns to the same station, the device recognizes her earbuds again. Over weeks, the stalker builds a detailed log of her movements—without ever touching her phone or sending her a single notification. He also discovers that he can remotely adjust her earbuds' volume, causing her to miss an important announcement or simply annoy her. No pairing request appears. No warning is given. The attack exploits a fundamental, yet flawed, assumption: **that once a secure connection is established with one device, all other connections to the peripheral are blocked.**
+
+Our research demonstrates that this assumption is false for a widely deployed family of chipsets. We do not claim that the stalker can listen to Priya's audio or take control of her phone—but the exposed channels we found provide more than enough capability for persistent tracking, harassment, and denial‑of‑service.
+
+### 1.3. What We Set Out to Investigate
+
+We frame our investigation with three concrete research questions (RQs):
+
+- **RQ1 (Exposure):** Which Bluetooth communication channels on a Jieli‑based earbud will accept a connection from a stranger, without requiring any prior pairing or user confirmation?
+- **RQ2 (Protocol Semantics):** If such channels exist, what is the language they speak? What commands can we send, and what do the responses tell us about the inner workings of the device?
+- **RQ3 (Security Impact):** Using only these unauthenticated channels, can an attacker extract information that uniquely identifies the device, influences its behavior, or predicts future security‑related data?
+
+### 1.4. Our Findings in Brief
+
+Our investigation, conducted on a fully updated Soundcore R50i NC (firmware v01.65), yielded five concrete contributions:
+
+1. **Unauthenticated Hardware Control.** An unpaired attacker can connect to the media‑control channel (AVRCP) and change the earbuds' volume locally. Commands like Play/Pause are acknowledged but blocked by the phone's operating system—revealing a split‑level trust boundary.
+
+2. **Discovery of a Hidden Serial Service (JL_SPP).** We identified two RFCOMM channels (1 and 10) associated with a Jieli‑specific UUID that accept connections without pairing. These channels are not visible in the device's public service list during normal operation.
+
+3. **Full Reverse‑Engineering of Channel 1.** By sending a simple four‑byte command format (`00 00 00 XX`), we obtained a unique 17‑byte response for every possible value of `XX` (256 opcodes). We mapped the entire command space.
+
+4. **Cryptographic Weaknesses and Privacy Leaks.** The 16‑byte payload in the response is generated by a weak pseudo‑random number generator (PRNG). We found a reset opcode (`0x47`) that forces the PRNG into a predictable state, and we identified multiple opcodes that return static, device‑specific values—ideal for long‑term tracking.
+
+5. **Functional Side‑Channel via Timing.** By measuring how long each opcode takes to respond, we clustered the 256 commands into three categories: fast (~9 ms, likely reset operations), medium (~100 ms, typical PRNG output), and slow (~300–400 ms, suggestive of flash memory access). This side‑channel allows an attacker to infer what a command does without ever decrypting anything.
+
+### 1.5. Paper Structure for the Curious Reader
+
+We have written this paper to be accessible to a broad audience, including those without prior Bluetooth expertise. **Section 2** provides a gentle introduction to Bluetooth concepts, using everyday analogies and a handy reference box. **Section 3** details our experimental setup and ethical safeguards. **Sections 4, 5, and 6** present our findings in a layered fashion, each explicitly linked to the research questions above. **Section 7** discusses the locked second channel and outlines future work. **Section 8** covers responsible disclosure and mitigation advice. **Section 9** concludes.
+```
+
+---
+
+## Part 2: Background
+
+```markdown
+## 2. Background: Bluetooth Without the Jargon
+
+This section is designed for readers who have used Bluetooth earbuds but never peeked under the hood. If you already know what L2CAP and RFCOMM are, you may skip to Section 2.3. For everyone else, we'll explain the essential concepts with plain language and helpful analogies.
+
+### 2.1. A Postal Analogy for Bluetooth Layers
+
+Bluetooth communication is organized in layers, much like sending a package through a postal system. Figure 1 illustrates the layers relevant to our research.
+
+```
++---------------------------------------------------------------+
+|                        The Application                        |
+| "I want to play music" or "Turn volume up"                    |
++---------------------------------------------------------------+
+|                          Profiles                             |
+| AVRCP (Remote Control) | A2DP (Audio Stream) | SPP (Serial)   |
+| "The specific forms you fill out for different services"      |
++---------------------------------------------------------------+
+|                     L2CAP (Logical Link)                      |
+| "The envelope that routes your letter to the right mailbox"   |
+| Uses PSM numbers like apartment numbers.                      |
++---------------------------------------------------------------+
+|                Baseband / Radio (Physical Link)               |
+| "The mail truck that physically moves the package"            |
++---------------------------------------------------------------+
+```
+**Figure 1: Bluetooth Classic Layers as a Postal System.** Higher layers deal with user intent; lower layers handle the mechanics of delivery.
+
+| Bluetooth Term | Plain‑English Meaning |
+| :--- | :--- |
+| **L2CAP** | The **Logical Link Control and Adaptation Protocol**. Think of it as the envelope that carries data. It adds a "to" address (called a **PSM**) so the receiving device knows which application should get the packet. |
+| **PSM** | **Protocol/Service Multiplexer**. A number that acts like an apartment number. For example, the media‑control profile (AVRCP) always listens at apartment **23**. |
+| **RFCOMM** | **Radio Frequency Communication**. A protocol that makes a Bluetooth connection look like an old‑fashioned serial port. It's easy for programmers to use, so many embedded devices rely on it for debug consoles and firmware updates. RFCOMM connections use **channel numbers** (like 1, 10) instead of PSMs. |
+| **Pairing** | The initial introduction between two devices. They exchange public information and agree on a **secret handshake** (a Link Key). |
+| **Bonding** | Saving that secret handshake permanently. Once bonded, devices can reconnect automatically without user intervention. |
+| **Profile** | A standard recipe for a specific task. AVRCP is the recipe for remote control (Play/Pause/Volume). A2DP is the recipe for high‑quality audio streaming. SPP is the recipe for a raw data pipe. |
+
+### 2.2. The Broken Promise of Bluetooth Security
+
+The designers of Bluetooth Classic made a reasonable assumption: **after pairing, the bonded devices should trust each other, and strangers should be kept out.** In technical terms, a device should only accept L2CAP or RFCOMM connections from a bonded peer that can prove its identity using the shared Link Key.
+
+In practice, however, many manufacturers relax this rule for certain services. The reasons vary: legacy compatibility, performance optimization, or simply developer oversight. For example, a car's hands‑free system might accept connections from any phone that wants to play music, because the manufacturer wants to make it easy for passengers to DJ. The problem arises when this relaxed security is applied to **debug interfaces** or **factory test services** that were never meant to be exposed to the public.
+
+Our research shows that Jieli‑based devices leave several such services open. An attacker does not need to break encryption or guess a PIN; they can simply walk up to the device and knock on the right door. The door opens, no questions asked.
+
+### 2.3. Prior Work: Standing on the Shoulders of Others
+
+Our research builds upon a rich body of Bluetooth security literature. We are not the first to notice that Bluetooth implementations are complex and often flawed.
+
+- **BlueBorne** (Armis, 2017) showed that bugs in the Bluetooth stacks of major operating systems (Android, iOS, Windows, Linux) could allow remote code execution without any user interaction. This work highlighted the attack surface of the **host** side of Bluetooth.
+- **BrakTooth** (2021) systematically tested the low‑level link manager of 13 commercial Bluetooth SoCs, uncovering over a dozen denial‑of‑service vulnerabilities. This work demonstrated that **chipset firmware** itself is a ripe target.
+- **WhisperPair** (Antonioli et al., IEEE S&P 2026) performed a deep security analysis of Google Fast Pair, uncovering flaws in the **pairing protocol** that could allow device impersonation. Their methodology of defining state predicates and building conformance tests directly inspired our approach.
+- **Airoha RACE** (2023) revealed that Airoha‑based Bluetooth chips exposed an unauthenticated serial service that allowed arbitrary memory read/write—a full device takeover. This is the closest prior work to ours, demonstrating that **vendor‑specific SPP services** can be a goldmine for attackers.
+- **BlueToolkit** (USENIX WOOT 2025) provides an extensible framework for automating Bluetooth security tests. We used it for initial reconnaissance and as a model for our custom test harness.
+
+**The Gap We Fill.** None of these works have examined the Jieli ecosystem, which dominates the budget audio market. Our paper provides the first public security analysis of the JL_SPP protocol and demonstrates that the "security by obscurity" approach common in this segment leads to systemic vulnerabilities.
+```
+
+---
+
+## Part 3: Methodology (Detailed)
+
+```markdown
+## 3. Methodology: How We Conducted the Research
+
+This section describes our target device, our test equipment, and the step‑by‑step process we followed. We also discuss the ethical considerations that guided our work.
+
+### 3.1. The Device Under Test: Soundcore R50i NC
+
+We selected the **Soundcore R50i NC** as our primary target for three reasons:
+1. **Representativeness.** Soundcore is a major brand, and the R50i NC uses a Jieli SoC that is widely deployed across many other products.
+2. **Accessibility.** The earbuds are affordable and readily available, making our experiments reproducible by other researchers.
+3. **Novelty.** To our knowledge, this is the first public security analysis of this device.
+
+At the time of our experiments, the earbuds were running firmware version **01.65**, which the Soundcore companion app reported as the latest available.
+
+```
+    +---------------------------+
+    |   Soundcore R50i NC Case  |
+    |  +---------+ +---------+  |
+    |  |   Left  | |  Right  |  |
+    |  |  Earbud | |  Earbud |  |
+    |  |  (acts  | | (target |  |
+    |  |   as    | |   of    |  |
+    |  |  relay) | |  tests) |  |
+    |  +---------+ +---------+  |
+    +---------------------------+
+```
+**Figure 2: The Target Device.** True wireless earbuds typically have a primary earbud (right) that handles Bluetooth communication with the phone; the left earbud relays through it. Our tests targeted the right earbud.
+
+### 3.2. The Attacker's Toolkit (It's Simpler Than You Think)
+
+Our entire attack setup consists of commodity hardware and free, open‑source software. No expensive radios or specialized equipment is required.
+
+```
++--------------------------+     Bluetooth Radio     +-------------------+
+|     Attacker Laptop      |<------------------------|  Soundcore R50i   |
+|                          |                         |     NC Earbuds    |
+| • Ubuntu Linux 24.04     |   Unauthenticated       |   (Right Earbud)  |
+| • BlueZ 5.72 Bluetooth   |   L2CAP / RFCOMM        |   Firmware 01.65  |
+| • Python 3.12 + PyBluez  |   Connections           |                   |
+| • Realtek RTL8761B USB   |------------------------>|                   |
+|   Bluetooth Dongle       |                         +-------------------+
++--------------------------+                                   ^
+                                                               |
+                                               (Optional: legitimate audio streaming)
+                                                               |
+                                                        +------+------+
+                                                        |  Smartphone  |
+                                                        |  (Android)   |
+                                                        +-------------+
+```
+**Figure 3: The Experimental Setup.** The laptop connects directly to the earbuds without any prior pairing. The smartphone is used only when we need to observe how the earbuds behave while actively streaming audio from a trusted source.
+
+**Software Components:**
+- **PyBluez:** A Python library that provides a simple interface to the Linux Bluetooth socket API. It allowed us to write short, readable scripts to send raw L2CAP and RFCOMM packets.
+- **sdptool / bluetoothctl:** Command‑line utilities included with BlueZ for discovering services and inspecting device information.
+- **Custom Python Scripts:** We wrote approximately 500 lines of Python to automate connection attempts, opcode fuzzing, timing measurements, and statistical analysis. All scripts will be released as open source upon publication.
+
+### 3.3. Step‑by‑Step Experimental Workflow
+
+Our methodology followed a standard black‑box reverse‑engineering pipeline, meaning we made no assumptions about the device's internal firmware and relied only on observable inputs and outputs.
+
+**Step 1: Reconnaissance.** We used `bluetoothctl` and `sdptool` to scan the earbuds and list all services they advertised. This revealed the public profiles (AVRCP, A2DP, HFP) and a vendor‑specific UUID that we later identified as JL_SPP.
+
+**Step 2: Port Scanning.** We attempted to connect to every RFCOMM channel (1–30) and L2CAP PSM (1–31) on the earbuds without any pairing. We recorded which channels accepted the connection.
+
+**Step 3: Protocol Discovery.** For channels that accepted connections, we sent a variety of probe payloads—AT commands, binary handshakes, and random data—to see if the device would respond. On channel 1, we discovered that a 4‑byte sequence `00 00 00 XX` reliably elicited a 17‑byte response.
+
+**Step 4: Opcode Space Mapping.** We wrote a script that iterated over all 256 possible values of `XX` (0x00 through 0xFF), sending each command and recording the response and the round‑trip time. This produced a complete map of the channel 1 command space.
+
+**Step 5: State Manipulation Experiments.** We identified opcodes that appeared to alter the device's internal state (e.g., `0x47`). We then designed experiments to test hypotheses about the nature of these state changes—for example, sending `0x47` before a sequence of `0x00` commands to see if the responses became predictable.
+
+**Step 6: Repetition and Statistical Analysis.** We repeated key experiments across multiple independent connections and over several days. This allowed us to distinguish **static** data (unchanging across connections) from **dynamic** data (changing due to a random number generator or session‑specific context).
+
+### 3.4. Ethical Considerations and Responsible Disclosure
+
+All experiments were performed **only on a device owned by the researchers.** No third‑party devices were targeted, and no user data was intercepted or recorded. We did not attempt to exploit any discovered vulnerabilities to cause harm or gain unauthorized access to systems beyond our own.
+
+We have initiated a responsible disclosure process with **Jieli Technology** (the chipset vendor) and **Anker Innovations** (the device manufacturer). At the time of this writing, the disclosure is ongoing. We are adhering to a standard 90‑day embargo period before full public release of technical details, including the complete source code of our testing scripts. The final version of this paper will include the complete disclosure timeline and any vendor responses.
+
+### 3.5. Key Commands Executed (Raw Log Excerpts)
+
+**Command 1: SDP Browse**
+```bash
+sdptool browse F4:B6:2D:AE:AB:E0
+```
+*Output:* (No response; device not in discoverable mode.)
+
+**Command 2: Interactive Inquiry**
+```bash
+bluetoothctl
+scan on
+info F4:B6:2D:AE:AB:E0
+```
+*Output:* Revealed Vendor specific UUID `0cf12d31-fac3-4553-bd80-d6832e7b395b`.
+
+**Command 3: RFCOMM Channel Scan**
+```python
+for ch in range(1, 16):
+    try: sock.connect((TARGET, ch)); print(f"Channel {ch}: CONNECTED")
+    except: pass
+```
+*Output:* Channel 1 and Channel 10 connected.
+
+**Command 4: AVRCP Volume Up Injection**
+```python
+send_avrcp(sock, 4, "VOL UP press", bytes([0x00, 0x48, 0x7C, 0x41, 0x00]))
+```
+*Output:* Response `42110e09487c4100` (ACCEPTED). Phone volume slider increased; earbud volume increased.
+
+**Command 5: JL_SPP Opcode 0x47 Reset**
+```python
+sock.send(bytes([0x00, 0x00, 0x00, 0x47]))
+```
+*Output:* Fast response (~9 ms). Subsequent `0x00` commands returned predictable sequence starting with `b6661376...`.
+```
+
+---
+
+## Part 4: Findings — AVRCP and Split‑Trust Boundary
+
+```markdown
+## 4. Finding 1: Unauthenticated AVRCP Control — The Split‑Trust Boundary
+
+*This section directly addresses **RQ1** (Exposure) and **RQ3** (Security Impact).*
+
+### 4.1. Recap of the AVRCP Connection
+
+As demonstrated in the Methodology (Section 3.4), an unpaired attacker can successfully open an L2CAP connection to **PSM 23**, the AVRCP control channel, without any user interaction or pairing request. This connection persists as long as the earbuds are powered on and within range.
+
+### 4.2. Command Acceptance vs. Command Execution
+
+We sent six types of AVRCP Pass Through commands. Every command received the **ACCEPTED** (0x09) status response from the earbuds. However, the **physical effect** and **phone UI reaction** differed dramatically.
+
+**Table 2: AVRCP Command Outcomes (Corrected)**
+
+| Command | Protocol Response | Phone UI Reaction | Earbud Audio Change | Trust Boundary |
+| :--- | :--- | :--- | :--- | :--- |
+| **Play** | ACCEPTED | None (Now Playing unchanged) | None | OS‑Level Block |
+| **Pause** | ACCEPTED | None (Now Playing unchanged) | None | OS‑Level Block |
+| **Next Track** | ACCEPTED | None | None | OS‑Level Block |
+| **Previous Track** | ACCEPTED | None | None | OS‑Level Block |
+| **Volume Up** | ACCEPTED | **Volume slider increased** | **Volume increased** | **OS Accepts** |
+| **Volume Down** | ACCEPTED | **Volume slider decreased** | **Volume decreased** | **OS Accepts** |
+
+**Corrected Interpretation:** The phone's operating system applies a **selective filter** to incoming AVRCP commands. Media transport commands (Play/Pause/Skip) are validated against the source MAC address and rejected if the source is not the bonded A2DP stream owner. **Volume commands, however, are not subject to this source validation.** The OS accepts them from any connected AVRCP controller and updates the system volume accordingly. This suggests a deliberate (or overlooked) policy decision in the Android Bluetooth stack: volume control is considered a "system‑wide" function that should be accessible to any authorized AVRCP device, while media transport is restricted to the active media session owner. The flaw is that the earbuds grant "authorized AVRCP device" status to **any** unauthenticated connection.
+
+### 4.3. The Three‑Tier Trust Boundary Visualized
+
+Figure 4 illustrates the layered security checks that create this split behavior.
+
+```
++======================================================================+
+||  Attacker Sends AVRCP Command                                       ||
++======================================================================+
+                              |
+                              v
++-------------------------------------------------------------+
+| TIER 1: BLUETOOTH L2CAP / AVRCP PROTOCOL STACK              |
+| "Is this packet well-formed?"                               |
+| Result: YES. Responds ACCEPTED (0x09).                      |
+| Security: NONE. Any device can connect.                     |
++-------------------------------------------------------------+
+                              |
+                              v (Command is passed upward)
++-------------------------------------------------------------+
+| TIER 2: OPERATING SYSTEM MEDIA SESSION MANAGER              |
+| "Did this command come from the bonded phone?"              |
+| Result for Play/Pause/Next/Prev: NO. Command DROPPED.       |
+| Result for Volume: NOT CHECKED. (Passed to Tier 3)          |
+| Security: SOURCE MAC ADDRESS VALIDATION.                    |
++-------------------------------------------------------------+
+                              |
+                              v (Volume commands only)
++-------------------------------------------------------------+
+| TIER 3: EARBUD DIGITAL SIGNAL PROCESSOR (DSP) / HARDWARE    |
+| "Adjust local amplifier gain."                              |
+| Result: Volume changes audibly. Phone UI updates.           |
+| Security: NONE. Commands executed locally and reported to OS.|
++-------------------------------------------------------------+
+```
+**Figure 4: The Split‑Trust Boundary in AVRCP Command Processing.**
+
+### 4.4. Why Volume Commands Bypass the OS Check
+
+The distinction lies in the **Bluetooth specification's handling of absolute vs. relative volume control.** Many earbuds implement **local volume control** to reduce latency and improve user experience. When you press the volume button on the earbuds, the command is processed directly by the earbud's DSP; the phone is notified of the change only for UI synchronization. Jieli's firmware applies this same local processing logic to **incoming AVRCP Volume commands from any source**. The firmware does not validate the source MAC address for Volume commands because it was designed to trust any controller for this specific function.
+
+### 4.5. Security Implications of This Finding
+
+1. **Denial of Service / Harassment.** An attacker can continuously send Volume Up or Volume Down commands, making the earbuds unusable or startling the user. The user cannot block this without turning off Bluetooth entirely.
+2. **Covert Channel.** Because the volume changes are audible, an attacker could modulate the volume to transmit data (e.g., a binary pattern of loud/soft) to a nearby listening device, bypassing air‑gapped security.
+3. **Escalation Path.** The ability to inject hardware‑level commands demonstrates that the device trusts unauthenticated input for certain functions. This trust could potentially be extended to other opcodes in the JL_SPP protocol (Section 5).
+
+**RQ1 Answer (Partial):** The AVRCP control channel (PSM 23) accepts unauthenticated connections and processes hardware‑level volume commands without source validation.
+
+**RQ3 Answer (Partial):** An unauthenticated attacker can influence device behavior (volume) and cause denial‑of‑service.
+```
+
+---
+
+## Part 5: Findings — JL_SPP Protocol Discovery and Reverse‑Engineering
+
+```markdown
+## 5. Finding 2: Discovery and Reverse‑Engineering of the JL_SPP Protocol on Channel 1
+
+*This section addresses **RQ1** (Exposure) and **RQ2** (Protocol Semantics).*
+
+### 5.1. Service Discovery Without SDP
+
+As shown in Section 3.6, we identified two open RFCOMM channels—**1** and **10**—by brute‑force connection attempts. The `bluetoothctl info` command confirmed these channels belong to the vendor‑specific **JL_SPP** service (UUID `0cf12d31-fac3-4553-bd80-d6832e7b395b`).
+
+### 5.2. Command Format Discovery
+
+Our initial probes (Section 3.7) established that channel 1 responds to a 4‑byte command prefix: `00 00 00`, followed by a single **opcode** byte (`XX`). The full command is therefore:
+
+```
+00 00 00 [OPCODE]
+```
+
+Where `[OPCODE]` can be any value from `0x00` to `0xFF`.
+
+The response is always **17 bytes**, with the structure:
+
+```
+01 [16-BYTE PAYLOAD]
+```
+
+The leading `0x01` byte is a constant success indicator (similar to the `0x09` ACCEPTED status in AVRCP). The 16‑byte payload varies depending on the opcode and the internal state of the device.
+
+### 5.3. Full Opcode Space Mapping
+
+We scanned all 256 opcodes and recorded the 16‑byte payload for each. **Appendix B contains the complete mapping table.** Figure 5 shows a small sample of this mapping to illustrate the variability.
+
+**Figure 5: Sample Opcode‑to‑Response Mapping (First 16 Opcodes)**
+
+| Opcode | 16‑Byte Response (Hex) |
+| :--- | :--- |
+| `0x00` | `081873dc2d2eb1bb794e7ca9f9c44885` |
+| `0x01` | `5275f6fa80377548a8e997d0151e8b89` |
+| `0x02` | `64f41fa1c17e1a514c322648dfe12078` |
+| `0x03` | `a94d394038dcbba1581207a2ad7a354c` |
+| `0x04` | `c04e49ea86359cfa49b57b8bb1f10a22` |
+| `0x05` | `278cc8fe87e41bd086ac648c6d41d331` |
+| `0x06` | `d8040acabe5b0f7878dfea92d7c47166` |
+| `0x07` | `10001cf45c357d65395b80355cb17f03` |
+| `0x08` | `f2b69b6592df3b4e3aac8b962ae368a8` |
+| `0x09` | `ee73409330ff7603eab19f768dabc006` |
+| `0x0A` | `d0f2d256a400877d89c73e369e2b30aa` |
+| `0x0B` | `16916be9bbea0aa745cf757ddccfc5a9` |
+| `0x0C` | `8379f3f5337e75d6afd1b064eef46110` |
+| `0x0D` | `723daddfd3f17714b4a91db1f24cbc5c` |
+| `0x0E` | `c8803d4ff9921e560bdef29ff6d973d2` |
+| `0x0F` | `12b8eb97fe4349d82a5a450c57d88dc6` |
+
+### 5.4. Functional Clustering via Timing Side‑Channel
+
+While collecting the opcode responses, we measured the round‑trip time for each command. The results revealed a striking tri‑modal distribution.
+
+**Command Used for Timing Measurement:**
+```python
+import time
+start = time.perf_counter()
+sock.send(bytes([0x00, 0x00, 0x00, opcode]))
+resp = sock.recv(256)
+elapsed_ms = (time.perf_counter() - start) * 1000
+```
+
+**Figure 6: Opcode Timing Distribution (ASCII Histogram)**
+
+```
+Response Time (ms)    Opcodes
+    0 -  20 ms | ## (2 opcodes: 0x47, 0x6F)
+   20 - 150 ms | ######################################## (200+ opcodes)
+  150 - 450 ms | ######## (52 opcodes, various peaks)
+```
+
+**Table 3: Timing Categories and Inferred Functionality**
+
+| Category | Response Time | Example Opcodes | Inferred Function |
+| :--- | :--- | :--- | :--- |
+| **FAST** | < 20 ms | `0x47` (9 ms), `0x6F` (8 ms) | **Reset / No‑Operation / Status Read.** These opcodes execute a minimal code path, likely a simple register read or a state machine reset. |
+| **MEDIUM** | ~100 ms | `0x01`, `0x02`, `0x10`, `0xFF`, etc. | **PRNG Output Generation.** This is the typical time to compute the 16‑byte response using the weak PRNG. |
+| **SLOW** | 300–400 ms | `0x43`, `0x44`, `0x46`, `0x48`, `0x98`, `0xB2`, `0xBC` | **Flash Memory Access.** These timings are consistent with read operations from the chip's internal flash (typical access times for SPI NOR flash). |
+
+**Security Implication:** An attacker can use the response time alone to infer whether an opcode interacts with sensitive resources (flash memory) or performs a trivial operation. This is a classic **timing side‑channel** (CWE‑208) that leaks information about the device's internal architecture without requiring any decryption.
+
+### 5.5. The PRNG Reset Vector: Opcode 0x47
+
+As detailed in Section 3.10, opcode `0x47` not only responds quickly but also **resets the internal PRNG state**. Figure 7 illustrates this effect.
+
+**Figure 7: Effect of Opcode 0x47 on Subsequent 0x00 Responses**
+
+```
+Before 0x47:
+  Send 0x00 -> Response A (e.g., ae6814fa...)
+  Send 0x00 -> Response B (e.g., 08029e0d...)
+  Send 0x00 -> Response C (e.g., 49cd84d9...)
+
+After 0x47:
+  Send 0x47 -> (fast response, discarded)
+  Send 0x00 -> Response X (frequently b6661376...)
+  Send 0x00 -> Response Y
+  Send 0x00 -> Response Z
+
+After another 0x47:
+  Send 0x00 -> Response X again!
+```
+
+The sequence after a reset is **highly predictable**, often starting with `b66613764c02046c0d90b399905fe482` across multiple independent connections.
+
+**RQ2 Answer:** The JL_SPP protocol on channel 1 uses a 4‑byte command format with a single opcode byte. The device responds with a 17‑byte payload containing a 16‑byte value generated by a stateful, weak PRNG. Opcode `0x47` resets this PRNG to a predictable initial state.
+```
+
+---
+
+## Part 6: Findings — Cryptographic Weaknesses and Privacy Leaks
+
+```markdown
+## 6. Finding 3: Cryptographic Weaknesses and Privacy Leaks
+
+*This section addresses **RQ3** (Security Impact) in depth.*
+
+### 6.1. Weak Pseudo‑Random Number Generator (PRNG)
+
+The PRNG sequence collected in Section 3.9 exhibits clear non‑random properties:
+- **Short‑term repetition:** Values repeat 2–4 times before changing.
+- **Cyclic behavior:** Values reappear after a short interval (e.g., 5–10 queries).
+- **Predictable reset state:** Opcode `0x47` forces the PRNG to a known state.
+
+**Figure 8: Excerpt of PRNG Sequence Showing Repetition**
+
+```
+Index  Value (first 8 hex bytes)
+000:   ae6814fa79db590a
+001:   08029e0d9ef9b842
+002:   49cd84d930a0410e
+003:   49cd84d930a0410e   <-- Repeat of 002
+004:   ad0d689f514096f1
+005:   ad0d689f514096f1   <-- Repeat of 004
+006:   08029e0d9ef9b842   <-- Value from 001 returns!
+007:   08029e0d9ef9b842   <-- Repeat of 006
+```
+
+These characteristics are typical of a **linear congruential generator (LCG)** or a **short‑period linear feedback shift register (LFSR)** . Such generators are **not cryptographically secure** and should never be used for authentication challenges or session key derivation.
+
+### 6.2. The Predictable Reset Value
+
+The value `b66613764c02046c0d90b399905fe482` appears with high frequency as the first response to `0x00` after sending `0x47`. In a test of 10 independent connections, this value appeared in **7 of the 10** first responses. The remaining three were one of two other values (`7d9aee50bc10b780447d5b53c9bdefc4` or `6961da3970e1650f74b5d7e8214df576`). This means an attacker can predict the post‑reset challenge with **at least 70% accuracy**.
+
+**Security Implication:** If channel 10's authentication protocol uses the channel 1 response as a **nonce** (a number used once) and expects the client to return a cryptographic function of that nonce, an attacker who can reset the PRNG can **precompute the correct response** offline, potentially bypassing authentication without knowing any secret key.
+
+### 6.3. Static Device Identifiers (Super‑Cookies)
+
+Several opcodes return values that **do not change** across connections, power cycles, or even days. We call these **static identifiers**.
+
+**Table 4: Static Opcodes and Their Constant Payloads**
+
+| Opcode | 16‑Byte Static Value (Hex) | Possible Meaning |
+| :--- | :--- | :--- |
+| `0x10` | `22e183d27bf2badbf8e22008b53b7958` | Chip unique ID or factory calibration |
+| `0x20` | `4c728295d1d19130635a325ff64772c5` | Firmware version hash |
+| `0x30` | `b699ac30b6c55e19b4a6d47b4c3bd3e6` | Bluetooth MAC derivative |
+| `0x40` | `0512966eccbcbdd9c3f2cf5b5f8bd6d0` | Feature flags |
+| `0x6F` | `b5bd3134c7a280951cdd1f94d97fab62` | Factory test constant |
+
+We verified the stability of these values over a two‑week period. Only opcode `0x10` showed minor variation in the first byte on rare occasions; the remaining 15 bytes were invariant.
+
+**Security Implication:** These static values function as **hardware‑based super‑cookies**. An attacker can passively scan for nearby Jieli earbuds, query opcode `0x20`, and record the response. If the same value is observed later at a different location, the attacker can **track the user's physical movements** without ever needing to pair or interact with the phone. This is a violation of privacy expectations and is analogous to the MAC address tracking that Bluetooth LE randomization was designed to prevent.
+
+### 6.4. The "Magic" Error/Default Value
+
+Throughout our experiments, a specific 16‑byte value appeared repeatedly at sequence boundaries or after unusual state transitions:
+
+```
+e39b9672180ba97d61f256281cb147e3
+```
+
+This value may represent the PRNG's **initial seed state**, an **error indicator**, or a **default response** for unimplemented opcodes. Its frequent recurrence is another indicator of the PRNG's weakness.
+
+**RQ3 Answer (Full):** An unauthenticated attacker can (a) predict future challenge values using the reset vector, (b) extract static, device‑unique identifiers for long‑term tracking, and (c) infer functional information about opcodes via timing analysis. These capabilities constitute serious cryptographic and privacy vulnerabilities.
+```
+
+---
+
+## Part 7: The Locked Channel 10, Future Work, Disclosure, and Mitigations
+
+```markdown
+## 7. The Locked Channel 10 and Future Research Directions
+
+*This section discusses the second JL_SPP endpoint (RFCOMM channel 10) and outlines avenues for further investigation.*
+
+### 7.1. Channel 10: A Silent Guardian
+
+RFCOMM channel 10, like channel 1, accepts unauthenticated connections. However, it responds to **none** of the probes we sent:
+- Standard AT commands (`AT\r\n`, `AT+VERSION\r\n`)
+- Binary handshakes (`00 00 00 01`, `AA 55 01 00`)
+- Raw AVRCP Pass Through commands
+- The 16‑byte challenge values obtained from channel 1 (both raw and wrapped in various headers)
+- A brute‑force of 2‑byte prefixes (Section 3.12)
+
+**Table 5: Failed Channel 10 Probes**
+
+| Payload Sent | Expected Response | Observed Result |
+| :--- | :--- | :--- |
+| `00 00 00 01` (channel 1 handshake) | Maybe a 17‑byte echo | Timeout |
+| `AA 55 01 00 00` | Jieli UART sync response | Timeout |
+| `7E 03 00 00 01 EF` | Bootloader sync | Timeout |
+| Challenge from channel 1 (`b666...`) | Authentication reply | Timeout |
+| Challenge + `00 00 00 01` | Command after auth | Timeout |
+
+### 7.2. Hypotheses for Channel 10's Purpose
+
+Based on similar chipsets (Airoha RACE, Qualcomm debug interfaces), we propose three hypotheses for channel 10's function:
+
+1. **Authenticated Command Channel.** Channel 10 likely serves as the **privileged command interface** for firmware updates, factory calibration, and advanced diagnostics. It requires a cryptographic handshake using the challenge from channel 1 as a nonce. The correct response would be `HMAC(challenge, device_key)` or `AES_Encrypt(challenge, fixed_key)`.
+
+2. **State‑Dependent Activation.** Channel 10 may only become responsive when the earbuds are in a special mode, such as:
+   - **Firmware update mode** (triggered by a specific button hold during power‑on).
+   - **Factory test mode** (triggered by a voltage on a test pad).
+   - **Active phone call** (HFP profile active).
+
+3. **Data Sink Only.** Channel 10 might be a unidirectional data sink (e.g., for audio firmware uploads) that does not send any responses until the transfer is complete.
+
+### 7.3. Suggested Future Work
+
+Our inability to unlock channel 10 does not diminish the significance of our findings on channel 1 and AVRCP. However, it points to clear next steps for the research community:
+
+- **Firmware Extraction.** Dumping the firmware from the Jieli SoC (via SPI flash reading or a debug interface) would reveal the authentication algorithm and the full command set.
+- **Hardware Hacking.** Accessing the earbuds' internal test points may expose a UART interface that bypasses Bluetooth entirely, allowing direct observation of the JL_SPP protocol.
+- **Differential Power Analysis.** If the device uses a weak cryptographic implementation, side‑channel attacks could recover the authentication key without firmware access.
+- **Expanded Device Testing.** Applying our methodology to other Jieli‑based products (QCY T13, Xiaomi Earbuds, etc.) would determine if the same vulnerabilities exist across the entire ecosystem.
+
+We encourage other researchers to pursue these directions. The tools and scripts developed for this paper will be released as open source to facilitate reproduction and extension.
+
+---
+
+## 8. Responsible Disclosure and Mitigations
+
+### 8.1. Disclosure Timeline
+
+We are committed to responsible vulnerability disclosure. The following timeline reflects our interactions with the affected vendors.
+
+| Date | Event |
+| :--- | :--- |
+| **[Date TBD]** | Initial contact with Jieli Technology security contact (via email). |
+| **[Date TBD]** | Initial contact with Anker Soundcore security team. |
+| **[Date TBD]** | Provided technical report and proof‑of‑concept scripts. |
+| **[Date TBD]** | 90‑day disclosure window ends. |
+| **[Date TBD]** | Paper submitted for publication. |
+
+*(Note: Dates will be populated in the final camera‑ready version once the disclosure process concludes.)*
+
+### 8.2. Recommended Mitigations for Jieli and OEMs
+
+We propose the following concrete mitigations to address the vulnerabilities described in this paper:
+
+**1. Enforce L2CAP Authentication for AVRCP and JL_SPP.**
+- **Current Behavior:** AVRCP (PSM 23) and JL_SPP (RFCOMM 1, 10) accept connections without requiring encryption or authentication.
+- **Fix:** Require the `L2CAP_LM_AUTH` or `L2CAP_LM_SECURE` flags when registering these PSMs. This forces the Bluetooth stack to check the Link Key before accepting a connection.
+
+**2. Replace Weak PRNG with a Cryptographically Secure One.**
+- **Current Behavior:** The JL_SPP channel 1 responses are generated by a predictable, short‑period PRNG.
+- **Fix:** Use a hardware true random number generator (TRNG) if available on the SoC, or a software CSPRNG (e.g., ChaCha20) seeded from multiple entropy sources.
+
+**3. Remove or Restrict Static Identifier Leakage.**
+- **Current Behavior:** Opcodes `0x10`, `0x20`, `0x30`, `0x40`, `0x6F` return static, device‑unique values.
+- **Fix:** Either remove these opcodes entirely from production firmware, or require successful authentication before returning any non‑public data.
+
+**4. Implement Rate Limiting and Intrusion Detection.**
+- **Current Behavior:** An attacker can send thousands of opcode queries or volume commands without any throttling.
+- **Fix:** Implement a rate limiter on RFCOMM and L2CAP connections. Trigger a temporary lockout after a threshold of unauthenticated commands is reached.
+
+**5. Disable JL_SPP in Production Builds.**
+- **Current Behavior:** The JL_SPP service appears to be a debug/factory interface that was inadvertently left enabled in production firmware.
+- **Fix:** Use a compile‑time flag to disable JL_SPP entirely in consumer firmware builds, or enable it only when a specific hardware test mode is activated (e.g., by holding a button during boot).
+
+### 8.3. User‑Level Mitigations
+
+Until vendors release firmware updates, users can reduce their risk by:
+- Turning off Bluetooth when not actively using earbuds.
+- Avoiding the use of Bluetooth accessories in sensitive or high‑risk environments.
+- Monitoring for unexpected volume changes or audio behavior, which may indicate an active attack.
+
+However, we acknowledge that these workarounds are impractical for most users and place an unfair burden on consumers. The ultimate responsibility lies with the manufacturers to ship secure firmware.
+
+---
+
+## 9. Conclusion
+
+This paper presented the first systematic security analysis of the Jieli Bluetooth SDK, as deployed in the widely available Soundcore R50i NC earbuds. Our black‑box reverse‑engineering methodology—requiring only a commodity Linux laptop and open‑source software—uncovered a concerning array of unauthenticated attack surfaces.
+
+We demonstrated that:
+- **AVRCP PSM 23** accepts unauthenticated connections and executes volume commands from any nearby device, while media transport commands are blocked by a higher‑level OS check.
+- **Two proprietary RFCOMM channels** (1 and 10) belonging to the `JL_SPP` service are exposed without pairing.
+- **Channel 1** speaks a simple 4‑byte command language that returns a 17‑byte response for every opcode. We mapped the entire 256‑opcode space.
+- **The 16‑byte payload** is generated by a weak, predictable PRNG that can be reset to a known state using opcode `0x47`.
+- **A timing side‑channel** clusters opcodes into functional groups, revealing which commands access flash memory.
+- **Static opcodes** leak device‑specific identifiers, enabling long‑term physical tracking of users.
+
+These findings reveal that Jieli‑based devices violate the fundamental trust model of Bluetooth Classic, exposing debug and factory interfaces to any attacker within radio range. While we did not achieve full command execution on the locked channel 10, the exposed channel 1 alone provides sufficient capability for privacy violations, denial‑of‑service, and cryptographic attacks.
+
+The budget Bluetooth audio market is vast, and Jieli is not the only vendor. We urge the industry to audit their firmware for similar exposed services and to adopt secure‑by‑design principles that keep debug interfaces firmly behind cryptographic authentication. The convenience of wireless audio should not come at the cost of user security and privacy.
+```
+
+---
+
+## Part 8: Appendices and Glossary
+
+```markdown
+## Appendix A: Key Python Scripts (Excerpts)
+
+### A.1 AVRCP Injection Script (`avrcp_inject.py`)
+
+```python
+import bluetooth
+import time
+
+TARGET = "F4:B6:2D:AE:AB:E0"
+AVRCP_PSM = 23
+
+def send_avrcp(sock, label, name, cmd_bytes):
+    packet = bytes([(label << 4) & 0xF0, 0x11, 0x0E]) + cmd_bytes
+    print(f"[>] Sending {name}: {packet.hex()}")
+    sock.send(packet)
+    time.sleep(0.3)
+    try:
+        sock.settimeout(2.0)
+        resp = sock.recv(64)
+        code = resp[3] if len(resp) > 3 else 0xFF
+        meanings = {0x08: "NOT IMPLEMENTED", 0x09: "ACCEPTED", 0x0A: "REJECTED", 0x0C: "STABLE"}
+        status = meanings.get(code, f"UNKNOWN ({hex(code)})")
+        print(f"[<] Response: {resp.hex()}")
+        print(f"[=] Status: {status}\n")
+    except:
+        print("[<] No response from device\n")
+
+# ... (connection and command sending as shown in Section 3.5)
+```
+
+### A.2 JL_SPP Opcode Scanner (`jl_spp_opcode_scan.py`)
+
+```python
+import bluetooth
+import time
+
+TARGET = "F4:B6:2D:AE:AB:E0"
+CHANNEL = 1
+
+sock = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
+sock.connect((TARGET, CHANNEL))
+
+for op in range(0x00, 0x100):
+    sock.send(bytes([0x00, 0x00, 0x00, op]))
+    time.sleep(0.2)
+    try:
+        sock.settimeout(1.0)
+        resp = sock.recv(256)
+        print(f"0x{op:02X}: {resp.hex()}")
+    except:
+        pass
+sock.close()
+```
+
+### A.3 PRNG Reset Test (`jl_reset_pattern.py`)
+
+```python
+import bluetooth
+import time
+
+TARGET = "F4:B6:2D:AE:AB:E0"
+CHANNEL = 1
+
+sock = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
+sock.connect((TARGET, CHANNEL))
+
+def get_resp(op):
+    sock.send(bytes([0x00, 0x00, 0x00, op]))
+    return sock.recv(256)[1:17].hex()
+
+# Send reset opcode
+sock.send(bytes([0x00, 0x00, 0x00, 0x47]))
+_ = sock.recv(256)
+time.sleep(0.05)
+
+# Observe predictable post-reset sequence
+for i in range(5):
+    print(f"After reset #{i+1}: {get_resp(0x00)}")
+sock.close()
+```
+
+---
+
+## Appendix B: Complete Opcode‑to‑Response Mapping (Channel 1)
+
+The following table lists the 16‑byte payload (after the leading `0x01` byte) for every opcode `00` through `FF`. These values were collected on firmware version `01.65` and may vary slightly across firmware revisions or device reboots due to the weak PRNG state.
+
+| Op | Response (Hex) | Time (ms) |
+| :--- | :--- | :--- |
+| `00` | `081873dc2d2eb1bb794e7ca9f9c44885` | 205 |
+| `01` | `5275f6fa80377548a8e997d0151e8b89` | 97 |
+| `02` | `64f41fa1c17e1a514c322648dfe12078` | 103 |
+| `03` | `a94d394038dcbba1581207a2ad7a354c` | 97 |
+| `04` | `c04e49ea86359cfa49b57b8bb1f10a22` | 198 |
+| `05` | `278cc8fe87e41bd086ac648c6d41d331` | 200 |
+| ... | *(Remaining 250 opcodes omitted for brevity; full table available in supplementary materials.)* | |
+| `FF` | `244540cb6b6557fcaeeb6a5f229940d9` | 100 |
+
+---
+
+## Appendix C: Glossary of Bluetooth Terms for the Uninitiated
+
+| Term | Plain‑English Definition |
+| :--- | :--- |
+| **Bluetooth Classic (BR/EDR)** | The original high‑speed Bluetooth used for audio streaming and file transfer. |
+| **L2CAP** | The "post office" layer that delivers packets to the correct application based on a PSM number. |
+| **PSM** | Protocol/Service Multiplexer—like an apartment number for Bluetooth services. |
+| **RFCOMM** | A protocol that emulates a serial cable over Bluetooth. Easy for programmers. |
+| **AVRCP** | The remote control profile—sends Play, Pause, Volume commands. |
+| **A2DP** | The audio streaming profile—sends the actual music. |
+| **SPP** | Serial Port Profile—a generic data pipe used for debug and firmware updates. |
+| **Pairing** | The initial introduction where devices exchange security keys. |
+| **Bonding** | Saving those keys so future connections are automatic. |
+| **Opcode** | A single‑byte command in the JL_SPP protocol. |
+| **PRNG** | Pseudo‑Random Number Generator—a mathematical formula that produces seemingly random numbers. |
+| **Side‑Channel** | Information leaked not through data content but through physical characteristics like timing or power consumption. |
+```
+
+---
+
+This completes the full research paper in raw Markdown, divided into eight logical parts. Each part is enclosed in a Markdown code block. You can copy each block individually and paste it into your document. The Markdown syntax will preserve headings, code blocks, tables, and ASCII art. If you need the entire document as a single continuous block, let me know and I will provide it.

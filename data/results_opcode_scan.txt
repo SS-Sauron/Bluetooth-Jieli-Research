@@ -1,0 +1,505 @@
+[*] Connecting to RFCOMM channel 1 on F4:B6:2D:AE:AB:E0...
+[+] Connected.
+
+Opcode 0x00: 0111893b560165d77356aac830839f1fc7 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x01: 01c7839c4f83f33c0748dad16f7c39c008 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x02: 014cd97a38cfba4834e72a05f4bb39d967 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x03: 01e03e18d0901b142e40c97ac7022eeb9d (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x04: 012555ddea9dec603dd82d620b75c761dc (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x05: 0141b0a6d53e16b041492b987d38345610 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x06: 01563a3b98b1c43f83449a8702d186b65e (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x07: 010b82c1a78a353cc05afd1adb7e3f87e6 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x08: 013628dbfafb42d2f3f81b1852383728f1 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x09: 011458f54bcceb9104a367eb052b5402e8 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x0A: 01d7d9cef35300ac58a61a00c951b7734f (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x0B: 01318794f54ee253383ba4ca9d07ff6420 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x0C: 019a2194682d54d44383b124ed332b125e (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x0D: 01f326d0b3dcd090f17713db99a3af2b74 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x0E: 01b8781d7572cdc65bd9be84301dab66bb (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x0F: 01298cafa2e898379bab773da8fecc0c2a (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x10: 01d57cadaa4b3a7b6f08eba6f6e3613876 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x11: 014d945c07613cddf798b2c5ffd67b35e4 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x12: 016a540a83c97e922e693466c6138c497e (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x13: 016c428fc4c38261cd728641bad924ff6a (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x14: 0106ed66226dbb0fc394494de02cc681b9 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x15: 015db94e3c770d89c3d12768dd594c9820 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x16: 014e917011a25f1a2baea1c1ba034f9818 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x17: 01815002b526ebef0c6eb134543f2c9be6 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x18: 01cf13ecb55d2a173f049d923ea261a768 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x19: 01bf46ad2e886c162f4d707d206c316bef (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x1A: 0170db7f9f84f8b106ed0759bf46f28aa5 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x1B: 013dddfcaf81616e49cbc292ba633d10f2 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x1C: 019a1b74c2d050a36355199336e9d5f764 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x1D: 011e40e90d1570a844ed7317802d97dd47 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x1E: 0129a2860a20c5ab4cdd197d271bce676e (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x1F: 01a9ec5aa58842637c82b371b8f304250e (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x20: 01e4758db0f6714355af286e799ec25e6b (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x22: 01ca3451753436965136ab7150e45c9b89 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x23: 019781e77932cf964c867153733fc23048 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x24: 01e4ab0bcef9ffaf783b3f395259eed339 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x25: 016d6b976f65ab00aead8c74964d5f5506 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x26: 018928fc8cef20dca1676f4d8026213f0a (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x27: 016b56fef90137aa54a299ab5abc1dca78 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x28: 01385f3c2cb20c67c81480bf7f1ef3eb26 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x29: 01f6c1519f941fb13cade1d11e018f3957 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x2A: 0162270085239b9739ff0099d83890c173 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x2B: 01b126e14edfdf8a161949564def426a04 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x2C: 013a238f2d11c23b82e3cba023276b8376 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x2D: 01b17d4709344ab9ba0e025903b3de2fc3 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x2E: 01c5ddb51fb9b13c8ebf0a79eecc351323 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x2F: 01f03d41d19527cf78cb27589e62f9abb4 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x30: 01676bbf74c1eff3053c8248128f708b4c (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x31: 01ce70a72191ea99ef65290890f7149fa9 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x32: 0184f5aaef9153107d73c92753d95e357f (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x33: 015fd8c2c3e719491b05f39124e9b532ce (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x34: 01973ba4992dbd4221bbc75b3c9044bd5e (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x35: 010d469c872f72426311f3b2ba95b746e6 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x36: 012224f900ee6466570cf910bd76fa5d56 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x37: 01c87beb0514115ea19a24a06d14a3ed1b (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x38: 018871bf5a4e9cb6611195343d0701bd25 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x39: 010c9ea9ef82bab3e4179bc84e29045c65 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x3A: 019dc125e3e72a705baec0daa6c90ce8e3 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x3B: 01871d99ae10541f6c154f816df8f0154b (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x3C: 017583ca7c83f4f6d1962e8208c4a618cc (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x3D: 0145be260e7fc5c0961b15fc072dcf47f6 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x3E: 01118dc553eba3f548f3eb51d8fa6e7616 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x3F: 011a7f21ccaad7cefdb5ea7658bf1a551c (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x40: 01f5acd98f16fa561a8cbe244ec626155c (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x41: 0157e9cfa8f0863c5166f3491b192d1825 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x42: 01d68422f5e7d47c74429ccfb9ae90c7da (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x43: 0140a626db47cb501ca9aa1523eb2824d3 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x44: 014555970045a4780433c7fc04e2156e5e (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x45: 019a605b9c0abafb6b32bc8bbe3dfada8d (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x46: 013a34c255a528f5db400b39d4c2da2455 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x47: 013beb75a19b080e521f7ffdcf9ae0f6ab (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x48: 015fd7ff7a20b52db307c1db27952fe84a (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x49: 0182e558599ea6078d9dc27fbf355a65fa (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x4A: 01f04f20224c105e0b7cc11675c0aa32c5 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x4B: 01d1654aff9e6f07afe9f490eeabf30b4b (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x4D: 01e7ff9c51dfd56b782a2db39542f3d103 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x50: 0193cbea65c604b5e766f5d2bbcfeba03c (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x51: 017c8eded8353644bd297c70695e3ff06e01e7709930f78b55a700efa49af9ca17d6 (len=34)
+  *** UNUSUAL LENGTH ***
+Opcode 0x52: 014a314ec61612f32663b8683449388452 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x53: 0137d54252f566fd6bb23623631f669d01 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x54: 018f74b874ca0c291d61e5b21b0ddbc148 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x55: 0178c159e98cae4f85e93398ec4866688f (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x56: 01923eabf228794e19395513cf0f37f268 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x57: 016804380787317186d19d43d3a90e59dd (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x58: 01de3c4551edb3594b45200909dc519cb7 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x59: 01c844fd60e05243e93f62f70182060cf8 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x5A: 01572b36362d641210fec39ba800637e92 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x5B: 01ff691e4d2566c32a1573c918e25e9d9e (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x5C: 01f4106c20fa1ff04b676d105c8c6bad34 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x5D: 016303f06ed4a70996ea6845cd7685ca4a (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x5E: 01e615374ce6feb972cc3f6adf87e31519 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x5F: 013ea7eb405cc6a322414012584dca3ae3 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x60: 01b8cbf83313c73bf816c14c71462d9a33 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x61: 013eff2c66d1ded140489996daf432a510 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x62: 0131afa92db0d075ec32c368cb5bcea61d (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x63: 019e1d12b5d033ca04b0b0faa449fad643 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x64: 01acc21e1c56da6e858c451ba2ac501754 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x65: 01baf66f662c167c52afeb1530d9df98ed (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x66: 0101d308f965f8d5efeea6dd4378eea707 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x67: 0182753ca4eae22bbbe182934a5ca11eac (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x68: 0149c272f132fe1ec471c8ea4f75476f78 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x69: 01caaa12ebf0cdb2373f9b252b0a9debf6 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x6A: 019ffa20dbe78a17a8e546e01de89024f1 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x6B: 0113c93ce2e657d483b9956fe1dcf6572f (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x6C: 01ecb487b489b1032fe984ba6c998a97ff (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x6D: 01a12ecc7f1e4024039d56a6b8b11d87f8 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x6E: 0130b0f06bdd301a4f1a3c181dbe6ce280 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x6F: 01c91ca6da0164b767a6c0f58c5532e0bb (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x70: 01c6b69446d3c550ad611700dd211a2152 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x71: 0150831cba7a8b9489a2b36e7b2c08578a (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x72: 01177f1d4694a2d8c9577fc2da4f5c6f8b (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x74: 0190b06ca4ea48087c08b051f7dee86d52 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x75: 01748adc47e9c1187f4574ef97e94a5509 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x76: 018bf9df2e554aca749aac19cd5d7b0572 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x77: 01ee4fc443aea4436758b214bf8ba80ad4 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x78: 0121c256a08cd0d04a65685809290576f9 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x79: 018665638eed305b0eb16cda5c8b92033b (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x7A: 01f389737d1ca4699d3e13e68070889270 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x7B: 012938f7d37de545b7b76defe845bf2d88 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x7C: 018cad44170513ec8002ce7eaf1abea589 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x7D: 0142bc5b0cca62554338d676840b6eada7 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x7E: 014a317809b6adfb228cfe4afb1cdb0ce6 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x7F: 014ce43ca8d9d73e0b9b34e7427bd1ddb9 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x80: 01d0570726fc1103a7091636e7518f0555 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x81: 01a035532878b4eb7713e549d505d3aa78 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x82: 01de4c63c110bd0a73b17b2ee47dba8327 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x83: 01fedd13e639278f674e4aadb4bba58345 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x84: 01dac4198c2a93654f146d17d5322951e7 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x85: 014211b7f3523d1d357ae719ffcd78d2fb (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x86: 01ede60b03adac6226981b568f6f035d4a (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x87: 016ceedf8a12ed7e010245462b92ca3b6f (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x88: 01c98e5fc417d41bb3ed6fdaef2f1ad03a (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x89: 0153df91b1cd7ef923c63eb9598bb3a1f5 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x8A: 0120a38d715b0ec7af464b2d42630602ef (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x8B: 01554e5f856f1cbd65ef2b139e0523fda4 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x8C: 01b71129290f8ab5f78e6581a6cc02d528 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x8D: 01db85d1dde0683cc9d516c794877838c6 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x8E: 01bcefc1ebe9e8cccd213c827ed6970cae (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x8F: 013af81146a4fa5b8f9eb3023499550721 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x90: 01fd3877f08eb91e7d00d5d1a14eabb336 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x91: 01d073f879c1836ad9d6ab0424fd79850d (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x92: 0137809700e9909eaed12a8ce440d8f4e7 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x93: 011d8c21c6a68194d81a9dcd285970eedc (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x94: 016c3bbfecb925451d9e19cd80ecb66dfb (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x95: 010beb5f5868fada2e48e8e1deb86939ea (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x96: 01f0ce294fe8f1ab2e43ecda44b0678151 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x97: 01feddd0ce4d94625ff150a53330b671ad (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x98: 0136317ff98b62d6799840a7da727c0432 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x99: 013e123d26139726355269968aa1243cc3 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x9A: 01339ea219f2974742c7740a8fffad50ff (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x9B: 01f2bfae4d742b418d8c1cad0052a2c31a (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x9C: 01ad24619a7297def6ad2a85685dabfe49 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x9D: 0146f8f4f8e92c9abb33b1438c6dac3c6f (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x9E: 015bbe5c265ca71dc35fa4adf85fcd9db6 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0x9F: 0111faad4be7e529aae047ecc54d14d391 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xA0: 0155548e81696b68f6e69636a29900f9d6 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xA1: 014ee6a9e98a9a69c28cf1989dd9f87240 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xA2: 01111102d9debc46a96730e7019b87cad1 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xA3: 012283b704199eb61916e87d73b5c24686 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xA4: 014c680537713b0ca1b2896f33e835f69d (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xA5: 01247dfda8a76bbc86c37e43334ff4e4f6 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xA6: 01e6a7b81a5235af7a18e722620cc854fa (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xA7: 01fcd60fde98ae6912936fff3aa0e5053e (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xA8: 01c6415dbec0c172585b52b2f06f0beb51 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xA9: 014fc7319b967e921adacede428f95e7e6 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xAA: 0166ece467f70c8c0595f73074930fb315 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xAB: 01a743d7b8e09765347d4ee1d3f8591ac8 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xAC: 01a997dae5d6b888c1d86cd7ff43c06c6b (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xAD: 015a930bb0c6118058cf7c0d82c8b4f225 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xAE: 017ad6b5915566fc02077647074fa81965 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xAF: 01db4a505cfa64cf36f821cbce7f377e5f (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xB0: 013d7f287b5f3a3b3f4371534d23ee3c76 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xB1: 01332cb84767072da702ac29c327670bd7 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xB2: 01257fae07bec8643a90ec1ca3396095f9 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xB3: 0101984f87c1bb6464abd3090c1eb4b67b (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xB4: 01a52da3e5fe363e40fbeed869e3ca66df (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xB5: 01d984d88b3815c5382b4870f37aefaa75 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xB6: 0114600f5d36605556ba33833562765e65 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xB7: 0193f7db76f737bcf38d229399e9dd8d79 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xB8: 011e0a802c16a6e061413e8ce805731a7d (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xB9: 01141fea21c93084bb0325e27535072bc2 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xBA: 0134435e85ae2aac2a6a2904b118bb238d (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xBB: 018deb4f5489920cb0d76e1b5b778a891d (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xBC: 01ca2efdf70484348824217e90b713e690 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xBD: 01116bce2236a473a04564a9e4d64caef1 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xBE: 019be1b6ceb347870d6047799c92a3b1db (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xBF: 01ccc77ded39da1ba1782fb99bab4b1901 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xC0: 0142a8006eef3c0c34a5e89f48b322b143 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xC1: 011fe4caa9f07a90e7b604934fedb6d2a8 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xC2: 0108e26e55d3e105bfea262e5541f7618a (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xC3: 0171e5e5ec03aca2c9f1459f47279c2d8b (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xC4: 01de20c23d87e6a3337cea5cbe5558986c (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xC5: 01e19f1176a654f5f0244ee8bd53a9e91e (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xC6: 01d27534a97f23b566c4a924da7a932da1 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xC7: 014921bc01e24ecaca8845a2c820c3bbed (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xC8: 0195bc00617ab0c85965026e0c831be13a (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xC9: 01f1118f9aacac3e89129c712a564de551 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xCA: 0140551ecaea55c21d016295e9f84cee8d (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xCB: 0192607c681a0c828490634a4cf7ce0089 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xCC: 013f6787459676788d94945c83aba041f2 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xCD: 01a9e1317a7003ef137335c5891700b6b7 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xCE: 01d2ad6b3578e16bdd4baf25fb8b3d34cf (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xCF: 0131c08955a5fcf762a1cea709cbf13bf2 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xD0: 01a700b3644ddd19cab80535545210c7eb (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xD1: 016cb79e49125301891f58aef460a344c7 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xD2: 01e78c4531e33192f9bf446ed9a541d670 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xD3: 01f5620591b404e46db37a0c5cfdc756cb (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xD4: 0143a3a222a355b1fed0c6dba827748c1e (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xD5: 01bd6856e67e78253728aa1cfcb68774e8 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xD6: 01f8b3c6bcc6985989473bbc42c255f3b5 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xD7: 012d844abad1cbd2f70581f30aad6ea177 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xD8: 01c03b71ea2d3190564a61da15e043e7a1 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xD9: 015bd5ea22995d01b024da8c296324ec12 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xDA: 01f69550d76f75dfeee10cfad0723916dc (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xDB: 01a5b73982af0eae3c9037e95ba0846da3 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xDC: 015992b150d4bea429c74ffbea53ea4d1c (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xDD: 01b96ff25de084063fdb207a02b9fe764e (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xDE: 01674ad632a14d324ef617f5150b3ec6c9 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xDF: 01823deb06f66b1ea156eb5091ab5028b4 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xE0: 01221123c1e1fbb232c247fb281429bf64 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xE1: 01e73c35843c3c7d2ee568541c29c545ce (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xE2: 017ad8b2f1e34c6b3985aad7a55e4938f4 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xE3: 01f08f26bb83c671ef3f2614542f569f15 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xE4: 0190a068212d431946d38596fbb569f979 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xE5: 012b72ade9dd7704ab841914688456db0b (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xE6: 01c87e12980fe147ffe042d5f3c5dc912d (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xE7: 016ef55bca819a1c95c5fb2445b4ddc640 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xE8: 01df4de8e69f91dcedf84771b25f55bd7f (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xE9: 01b3f0ebaa41fd8812468eac987a15a559 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xEA: 015b20d8d037500213085a8f62df0fa202 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xEB: 017b9d8bd7a8a5613073e37c2a61052609 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xEC: 01f01a5362ebb529e6ad6d6c785f0385e4 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xED: 01c4a405d6feaf00e8ff1587244505661a (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xEE: 013ea0777ed14cde902462a86d59c2f859 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xEF: 0192c3ad68f49a16a6094b7421a7098890 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xF0: 01aa8833cf775ec81be0d42ea1314f1211 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xF1: 01a842d02801a01d217adefcba7031f672 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xF2: 016aaa8c43a8c285f5dadce57ec69c2c18 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xF3: 01d50a9ac3ad6680daaaa0ea58e569a280 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xF4: 017f14332ca2c94cb9c6f4e59f29031765 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xF5: 010d4034a09bc16487477a10a406cf8db2 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xF6: 0143d24a297f6f967cb95af7d6cf3a3a1b (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xF7: 019954c3a9e10342970dbf4fa2e28c6352 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xF8: 01c1b64a6ae48a497a93f2c078668f0366 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xF9: 01a4cb765dbbd08084de2d3e3988b0d7f6 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xFA: 0146eb32df9741a28c7a846341637f7723 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xFB: 01240ce6b18864b38e0737ec84e94a5ec6 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xFC: 0138008c63f735c7a52dda851fe95d2d17 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xFD: 01ce240fa027cb4adefd9adf90cd596d03 (len=17)
+  *** UNUSUAL LENGTH ***
+Opcode 0xFE: 019ca8919a397bcf64ad1063c798672e5c (len=17)
+  *** UNUSUAL LENGTH ***
+
+[+] Scan complete.

@@ -1,0 +1,17 @@
++-------------------+          +---------------------------------------------+          +-------------------+
+|                   |          |                                             |          |                   |
+|   Your Android    |          |   USB-C to UART Serial Adapter Cable        |          |   ESP32           |
+|   Phone           |          |   (with pin headers)                        |          |   Development     |
+|   (USB-C Port)    |=========>|                                             |=========>|   Board           |
+|                   |          |   This cable contains a chip that           |          |   (Pin Headers)   |
+|                   |          |   handles the USB Host negotiation.         |          |                   |
+|   Acts as the     |          |                                             |          |   Acts as the     |
+|   USB HOST        |          |                                             |          |   USB DEVICE      |
+|                   |          |                                             |          |                   |
++-------------------+          +---------------------------------------------+          +-------------------+
+       |                                    |                                                  |
+       |  USB-C Male                        |  Individual Wires:                                |  Pins on Board:
+       |  plugs into phone                  |  TX  (Transmit)  ----------------------------->   |  RX  (Receive)
+       |                                    |  RX  (Receive)   <-----------------------------   |  TX  (Transmit)
+       |                                    |  GND (Ground)    ------------------------------>   |  GND (Ground)
+       |                                    |  VCC (Power)     ------(Optional, not needed)---   |  5V / VIN

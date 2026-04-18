@@ -1,0 +1,15 @@
++-------------------+          +-------------------+          +-------------------+          +-------------------+
+|                   |          |                   |          |                   |          |                   |
+|   Your Android    |          |   USB-C OTG       |          |   USB-A to        |          |   ESP32           |
+|   Phone           |          |   Adapter         |          |   USB-C Cable     |          |   Development     |
+|   (USB-C Port)    |=========>|   (Female USB-A)  |=========>|   (Data Cable)    |=========>|   Board           |
+|                   |          |                   |          |                   |          |   (USB-C Port)    |
+|                   |          |                   |          |                   |          |                   |
+|   Acts as the     |          |   Tells the phone |          |   Carries data    |          |   Acts as the     |
+|   USB HOST        |          |   "You are the    |          |   and power       |          |   USB DEVICE      |
+|   (The Brain)     |          |    Host!"         |          |   from phone to   |          |   (The Worker)    |
+|                   |          |                   |          |   ESP32.          |          |                   |
++-------------------+          +-------------------+          +-------------------+          +-------------------+
+       |                             |                                 |                                 |
+       |  USB-C Male                 |  USB-C Male to                  |  USB-A Male to                  |  USB-C Female
+       |  plugs into phone           |  USB-A Female                   |  USB-A Female                   |  receives cable

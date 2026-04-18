@@ -1,0 +1,20 @@
+[*] Connecting to RFCOMM channel 10...
+[+] Connected.
+
+--- Testing format: 00 00 00 [opcode] ---
+> 00000000
+> 00000001
+> 00000002
+> 000000ff
+
+--- Testing format: AA 55 + length + data ---
+> aa55010000
+> aa55010001
+> aa55010002
+
+--- Testing format: 7E + len + data + checksum ---
+> 7e010000ff
+
+--- Testing: challenge + command ---
+> challenge + 00 00 00 01
+[+] Done.

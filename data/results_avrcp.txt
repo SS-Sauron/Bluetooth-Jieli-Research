@@ -1,0 +1,82 @@
+[*] Connecting to AVRCP PSM 23 without pairing...
+[+] Connected successfully
+
+[*] Flushing initial buffer...
+[+] Buffer cleared. Starting tests.
+
+--- TEST 1: PAUSE ---
+[>] Sending PAUSE press: 00110e00487c4600
+[<] Response: 02110e09487c4600
+[=] Status: ACCEPTED
+
+[>] Sending PAUSE release: 10110e00487cc600
+[<] Response: 12110e09487cc600
+[=] Status: ACCEPTED
+
+--- TEST 2: PLAY ---
+[>] Sending PLAY press: 20110e00487c4400
+[<] Response: 22110e09487c4400
+[=] Status: ACCEPTED
+
+[>] Sending PLAY release: 30110e00487cc400
+[<] Response: 32110e09487cc400
+[=] Status: ACCEPTED
+
+--- TEST 3: VOLUME UP ---
+[>] Sending VOL UP press: 40110e00487c4100
+[<] Response: 42110e09487c4100
+[=] Status: ACCEPTED
+
+[>] Sending VOL UP release: 50110e00487cc100
+[<] Response: 52110e09487cc100
+[=] Status: ACCEPTED
+
+--- TEST 4: VOLUME DOWN ---
+[>] Sending VOL DOWN press: 60110e00487c4200
+[<] Response: 62110e09487c4200
+[=] Status: ACCEPTED
+
+[>] Sending VOL DOWN release: 70110e00487cc200
+[<] Response: 72110e09487cc200
+[=] Status: ACCEPTED
+
+--- Faking Click - NEXT TRACK 1 ---
+[>] Sending NEXT press: 00110e00487c4b00
+[<] Response: 02110e09487c4b00
+[=] Status: ACCEPTED
+
+[>] Sending NEXT release: 10110e00487ccb00
+[<] Response: 12110e09487ccb00
+[=] Status: ACCEPTED
+
+--- Faking Click - NEXT TRACK 2 ---
+[>] Sending NEXT press: 10110e00487c4b00
+[<] Response: 12110e09487c4b00
+[=] Status: ACCEPTED
+
+[>] Sending NEXT release: 20110e00487ccb00
+[<] Response: 22110e09487ccb00
+[=] Status: ACCEPTED
+
+--- Faking Click - NEXT TRACK 3 ---
+[>] Sending NEXT press: 20110e00487c4b00
+[<] Response: 22110e09487c4b00
+[=] Status: ACCEPTED
+
+[>] Sending NEXT release: 30110e00487ccb00
+[<] Response: 32110e09487ccb00
+[=] Status: ACCEPTED
+
+--- TEST 6: PREVIOUS TRACK ---
+[>] Sending PREV press: a0110e00487c4c00
+[<] Response: a2110e09487c4c00
+[=] Status: ACCEPTED
+
+[>] Sending PREV release: b0110e00487ccc00
+[<] Response: b2110e09487ccc00
+[=] Status: ACCEPTED
+
+[>] Sending UNIT INFO: c0110e004830ffffffffff
+[<] No response from device
+
+[+] Done — note what happened on your phone/earbuds for each command

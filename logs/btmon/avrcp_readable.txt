@@ -1,0 +1,1351 @@
+Bluetooth monitor ver 5.72
+= Note: Linux version 6.17.0-20-generic (x86_64)                       0.617404
+= Note: Bluetooth subsystem version 2.22                               0.617406
+= New Index: B0:19:21:16:9E:BA (Primary,USB,hci0)               [hci0] 0.617407
+= Open Index: B0:19:21:16:9E:BA                                 [hci0] 0.617407
+= Index Info: B0:19:21:1.. (Realtek Semiconductor Corporation)  [hci0] 0.617408
+@ MGMT Open: bluetoothd (privileged) version 1.23             {0x0001} 0.617409
+@ MGMT Command: Start Discovery (0x0023) plen 1        {0x0001} [hci0] 3.409428
+        Address type: 0x07
+          BR/EDR
+          LE Public
+          LE Random
+< HCI Command: LE Set Random Address (0x08|0x0005) plen 6    #1 [hci0] 3.409454
+        Address: 06:1E:CC:7A:93:A8 (Non-Resolvable)
+> HCI Event: Command Complete (0x0e) plen 4                  #2 [hci0] 3.410328
+      LE Set Random Address (0x08|0x0005) ncmd 2
+        Status: Success (0x00)
+< HCI Command: LE Set Extended Scan.. (0x08|0x0041) plen 13  #3 [hci0] 3.410349
+        Own address type: Random (0x01)
+        Filter policy: Accept all advertisement (0x00)
+        PHYs: 0x05
+        Entry 0: LE 1M
+          Type: Active (0x01)
+          Interval: 22.500 msec (0x0024)
+          Window: 11.250 msec (0x0012)
+        Entry 1: LE Coded
+          Type: Active (0x01)
+          Interval: 67.500 msec (0x006c)
+          Window: 33.750 msec (0x0036)
+> HCI Event: Command Complete (0x0e) plen 4                  #4 [hci0] 3.412322
+      LE Set Extended Scan Parameters (0x08|0x0041) ncmd 2
+        Status: Success (0x00)
+< HCI Command: LE Set Extended Scan... (0x08|0x0042) plen 6  #5 [hci0] 3.412342
+        Extended scan: Enabled (0x01)
+        Filter duplicates: Enabled (0x01)
+        Duration: 0 msec (0x0000)
+        Period: 0.00 sec (0x0000)
+> HCI Event: Command Complete (0x0e) plen 4                  #6 [hci0] 3.414323
+      LE Set Extended Scan Enable (0x08|0x0042) ncmd 2
+        Status: Success (0x00)
+@ MGMT Event: Discovering (0x0013) plen 2              {0x0001} [hci0] 3.414330
+        Address type: 0x07
+          BR/EDR
+          LE Public
+          LE Random
+        Discovery: Enabled (0x01)
+< HCI Command: Inquiry (0x01|0x0001) plen 5                  #7 [hci0] 3.414344
+        Access code: 0x9e8b33 (General Inquiry)
+        Length: 10.24s (0x08)
+        Num responses: 0
+> HCI Event: Command Status (0x0f) plen 4                    #8 [hci0] 3.416326
+      Inquiry (0x01|0x0001) ncmd 2
+        Status: Success (0x00)
+@ MGMT Event: Command Complete (0x0001) plen 4         {0x0001} [hci0] 3.416342
+      Start Discovery (0x0023) plen 1
+        Status: Success (0x00)
+        Address type: 0x07
+          BR/EDR
+          LE Public
+          LE Random
+> HCI Event: LE Meta Event (0x3e) plen 112                   #9 [hci0] 4.296360
+      LE Extended Advertising Report (0x0d)
+        Num reports: 2
+        Entry 0
+          Event type: 0x0013
+            Props: 0x0013
+              Connectable
+              Scannable
+              Use legacy advertising PDUs
+            Data status: [0;32mComplete[0m
+          Legacy PDU Type: ADV_IND (0x0013)
+          Address type: Public (0x00)
+          Address: F4:B6:2D:AC:DA:28 (Dongguan Huayin Electronic Technology Co., Ltd.)
+          Primary PHY: LE 1M
+          Secondary PHY: No packets
+          SID: no ADI field (0xff)
+          TX power: 127 dBm
+          RSSI: -56 dBm (0xc8)
+          Periodic advertising interval: 0.00 msec (0x0000)
+          Direct address type: Public (0x00)
+          Direct address: 00:00:00:00:00:00 (OUI 00-00-00)
+          Data length: 0x1f
+        02 01 06 09 ff f4 b6 2d ae ab e0 00 00 05 05 01  .......-........
+        8b f5 da 00 00 00 00 00 00 00 00 00 00 00 00     ............... 
+        Flags: 0x06
+          LE General Discoverable Mode
+          BR/EDR Not Supported
+        Company: not assigned (46836)
+          Data: 2daeabe00000
+        32-bit Service UUIDs (complete): 1 entry
+          Unknown (0xdaf58b01)
+        Entry 1
+          Event type: 0x001b
+            Props: 0x001b
+              Connectable
+              Scannable
+              Scan response
+              Use legacy advertising PDUs
+            Data status: [0;32mComplete[0m
+          Legacy PDU Type: SCAN_RSP to an ADV_SCAN_IND (0x001b)
+          Address type: Public (0x00)
+          Address: F4:B6:2D:AC:DA:28 (Dongguan Huayin Electronic Technology Co., Ltd.)
+          Primary PHY: LE 1M
+          Secondary PHY: No packets
+          SID: no ADI field (0xff)
+          TX power: 127 dBm
+          RSSI: -56 dBm (0xc8)
+          Periodic advertising interval: 0.00 msec (0x0000)
+          Direct address type: Public (0x00)
+          Direct address: 00:00:00:00:00:00 (OUI 00-00-00)
+          Data length: 0x1f
+        02 01 06 00 00 00 00 00 00 00 00 00 00 00 00 00  ................
+        00 00 00 00 00 00 00 00 00 00 00 00 00 00 00     ............... 
+        Flags: 0x06
+          LE General Discoverable Mode
+          BR/EDR Not Supported
+@ MGMT Event: Device Found (0x0012) plen 36            {0x0001} [hci0] 4.296375
+        LE Address: F4:B6:2D:AC:DA:28 (Dongguan Huayin Electronic Technology Co., Ltd.)
+        RSSI: -56 dBm (0xc8)
+        Flags: 0x00000000
+        Data length: 22
+        Flags: 0x06
+          LE General Discoverable Mode
+          BR/EDR Not Supported
+        Company: not assigned (46836)
+          Data: 2daeabe00000
+        32-bit Service UUIDs (complete): 1 entry
+          Unknown (0xdaf58b01)
+        Flags: 0x06
+          LE General Discoverable Mode
+          BR/EDR Not Supported
+< HCI Command: Inquiry Cancel (0x01|0x0002) plen 0          #10 [hci0] 4.803798
+> HCI Event: Command Complete (0x0e) plen 4                 #11 [hci0] 4.807379
+      Inquiry Cancel (0x01|0x0002) ncmd 2
+        Status: Success (0x00)
+< HCI Command: Create Connection (0x01|0x0005) plen 13      #12 [hci0] 4.807396
+        Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+        Packet type: 0xcc18
+          DM1 may be used
+          DH1 may be used
+          DM3 may be used
+          DH3 may be used
+          DM5 may be used
+          DH5 may be used
+        Page scan repetition mode: R2 (0x02)
+        Page scan mode: Mandatory (0x00)
+        Clock offset: 0x0000
+        Role switch: Allow peripheral (0x01)
+> HCI Event: Command Status (0x0f) plen 4                   #13 [hci0] 4.809375
+      Create Connection (0x01|0x0005) ncmd 2
+        Status: Success (0x00)
+> HCI Event: Connect Complete (0x03) plen 11                #14 [hci0] 5.878428
+        Status: Success (0x00)
+        Handle: 2
+        Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+        Link type: ACL (0x01)
+        Encryption: Disabled (0x00)
+< HCI Command: Read Remote Supporte.. (0x01|0x001b) plen 2  #15 [hci0] 5.878509
+        Handle: 2 Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+@ RAW Open: btmon (privileged) version 2.22                   {0x0002} 5.878627
+@ RAW Close: btmon                                            {0x0002} 5.878630
+> HCI Event: Command Status (0x0f) plen 4                   #16 [hci0] 5.883416
+      Read Remote Supported Features (0x01|0x001b) ncmd 2
+        Status: Success (0x00)
+> HCI Event: Max Slots Change (0x1b) plen 3                 #17 [hci0] 5.887416
+        Handle: 2 Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+        Max slots: 5
+> HCI Event: Read Remote Supported Features (0x0b) plen 11  #18 [hci0] 5.891421
+        Status: Success (0x00)
+        Handle: 2 Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+        Features: 0xbf 0xfe 0x8d 0xfa 0xd8 0x3d 0x79 0x87
+          3 slot packets
+          5 slot packets
+          Encryption
+          Slot offset
+          Timing accuracy
+          Role switch
+          Sniff mode
+          Power control requests
+          Channel quality driven data rate (CQDDR)
+          SCO link
+          HV2 packets
+          HV3 packets
+          u-law log synchronous data
+          A-law log synchronous data
+          CVSD synchronous data
+          Power control
+          Transparent synchronous data
+          Broadcast Encryption
+          Enhanced Data Rate ACL 2 Mbps mode
+          Enhanced inquiry scan
+          Interlaced inquiry scan
+          Interlaced page scan
+          RSSI with inquiry results
+          Extended SCO link (EV3 packets)
+          AFH capable peripheral
+          AFH classification peripheral
+          LE Supported (Controller)
+          3-slot Enhanced Data Rate ACL packets
+          5-slot Enhanced Data Rate ACL packets
+          Pause encryption
+          AFH capable central
+          AFH classification central
+          Enhanced Data Rate eSCO 2 Mbps mode
+          Extended Inquiry Response
+          Secure Simple Pairing
+          Encapsulated PDU
+          Erroneous Data Reporting
+          Non-flushable Packet Boundary Flag
+          Link Supervision Timeout Changed Event
+          Inquiry TX Power Level
+          Enhanced Power Control
+          Extended features
+< HCI Command: Read Remote Extended.. (0x01|0x001c) plen 3  #19 [hci0] 5.891432
+        Handle: 2 Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+        Page: 1
+> HCI Event: Command Status (0x0f) plen 4                   #20 [hci0] 5.893416
+      Read Remote Extended Features (0x01|0x001c) ncmd 2
+        Status: Success (0x00)
+> HCI Event: Read Remote Extended Features (0x23) plen 13   #21 [hci0] 5.980431
+        Status: Success (0x00)
+        Handle: 2 Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+        Page: 1/2
+        Features: 0x01 0x00 0x00 0x00 0x00 0x00 0x00 0x00
+          Secure Simple Pairing (Host Support)
+< HCI Command: Remote Name Request (0x01|0x0019) plen 10    #22 [hci0] 5.980447
+        Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+        Page scan repetition mode: R2 (0x02)
+        Page scan mode: Mandatory (0x00)
+        Clock offset: 0x0000
+> HCI Event: Command Status (0x0f) plen 4                   #23 [hci0] 5.982416
+      Remote Name Request (0x01|0x0019) ncmd 2
+        Status: Success (0x00)
+> HCI Event: Remote Name Req Complete (0x07) plen 255       #24 [hci0] 6.092434
+        Status: Success (0x00)
+        Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+        Name: soundcore R50i NC
+@ MGMT Event: Device Connected (0x000b) plen 32        {0x0001} [hci0] 6.092460
+        BR/EDR Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+        Flags: 0x00000008
+          Connection Locally Initiated
+        Data length: 19
+        Name (complete): soundcore R50i NC
+< HCI Command: Authentication Reque.. (0x01|0x0011) plen 2  #25 [hci0] 6.092466
+        Handle: 2 Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+> HCI Event: Command Status (0x0f) plen 4                   #26 [hci0] 6.094422
+      Authentication Requested (0x01|0x0011) ncmd 2
+        Status: Success (0x00)
+> HCI Event: Link Key Request (0x17) plen 6                 #27 [hci0] 6.096423
+        Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+< HCI Command: Link Key Request Neg.. (0x01|0x000c) plen 6  #28 [hci0] 6.096434
+        Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+> HCI Event: Command Complete (0x0e) plen 10                #29 [hci0] 6.098427
+      Link Key Request Negative Reply (0x01|0x000c) ncmd 2
+        Status: Success (0x00)
+        Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+> HCI Event: IO Capability Request (0x31) plen 6            #30 [hci0] 6.100424
+        Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+< HCI Command: IO Capability Reques.. (0x01|0x002b) plen 9  #31 [hci0] 6.100436
+        Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+        IO capability: DisplayYesNo (0x01)
+        OOB data: Authentication data not present (0x00)
+        Authentication: No Bonding - MITM not required (0x00)
+> HCI Event: Command Complete (0x0e) plen 10                #32 [hci0] 6.102424
+      IO Capability Request Reply (0x01|0x002b) ncmd 2
+        Status: Success (0x00)
+        Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+> HCI Event: IO Capability Response (0x32) plen 9           #33 [hci0] 6.291450
+        Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+        IO capability: NoInputNoOutput (0x03)
+        OOB data: Authentication data not present (0x00)
+        Authentication: Dedicated Bonding - MITM not required (0x02)
+> HCI Event: User Confirmation Request (0x33) plen 10       #34 [hci0] 6.789459
+        Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+        Passkey: 315172
+< HCI Command: User Confirmation Re.. (0x01|0x002c) plen 6  #35 [hci0] 6.789476
+        Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+> HCI Event: Command Complete (0x0e) plen 10                #36 [hci0] 7.088471
+      User Confirmation Request Reply (0x01|0x002c) ncmd 2
+        Status: Success (0x00)
+        Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+> HCI Event: Simple Pairing Complete (0x36) plen 7          #37 [hci0] 7.281475
+        Status: Success (0x00)
+        Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+> HCI Event: Link Key Notification (0x18) plen 23           #38 [hci0] 7.496486
+        Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+        Link key: 571ea6f81cac0a7c5c1d2e089bdaadeb
+        Key type: Unauthenticated Combination key from P-192 (0x04)
+@ MGMT Event: New Link Key (0x0009) plen 26            {0x0001} [hci0] 7.496504
+        Store hint: No (0x00)
+        BR/EDR Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+        Key type: Unauthenticated Combination key from P-192 (0x04)
+        Link key: 571ea6f81cac0a7c5c1d2e089bdaadeb
+        PIN length: 0
+> HCI Event: Auth Complete (0x06) plen 3                    #39 [hci0] 7.498474
+        Status: Success (0x00)
+        Handle: 2 Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+< HCI Command: Set Connection Encry.. (0x01|0x0013) plen 3  #40 [hci0] 7.498484
+        Handle: 2 Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+        Encryption: Enabled (0x01)
+> HCI Event: Command Status (0x0f) plen 4                   #41 [hci0] 7.500474
+      Set Connection Encryption (0x01|0x0013) ncmd 2
+        Status: Success (0x00)
+> HCI Event: Encryption Change (0x08) plen 4                #42 [hci0] 7.688490
+        Status: Success (0x00)
+        Handle: 2 Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+        Encryption: Enabled with E0 (0x01)
+< HCI Command: Read Encryption Key... (0x05|0x0008) plen 2  #43 [hci0] 7.688504
+        Handle: 2 Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+> HCI Event: Command Complete (0x0e) plen 7                 #44 [hci0] 7.691484
+      Read Encryption Key Size (0x05|0x0008) ncmd 2
+        Status: Success (0x00)
+        Handle: 2 Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+        Key size: 16
+< ACL Data TX: Handle 2 flags 0x00 dlen 10                  #45 [hci0] 7.691497
+      L2CAP: Information Request (0x0a) ident 1 len 2
+        Type: Extended features supported (0x0002)
+> HCI Event: Number of Completed Packets (0x13) plen 5      #46 [hci0] 7.780492
+        Num handles: 1
+        Handle: 2 Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+        Count: 1
+        #45: len 10 (0 Kb/s)
+        Latency: 88 msec (88-88 msec ~88 msec)
+> ACL Data RX: Handle 2 flags 0x02 dlen 16                  #47 [hci0] 7.783383
+      L2CAP: Information Response (0x0b) ident 1 len 8
+        Type: Extended features supported (0x0002)
+        Result: Success (0x0000)
+        Features: 0x00000000
+< ACL Data TX: Handle 2 flags 0x00 dlen 12                  #48 [hci0] 7.783395
+      L2CAP: Connection Request (0x02) ident 2 len 4
+        PSM: 23 (0x0017)
+        Source CID: 64
+> HCI Event: Number of Completed Packets (0x13) plen 5      #49 [hci0] 7.785483
+        Num handles: 1
+        Handle: 2 Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+        Count: 1
+        #48: len 12 (48 Kb/s)
+        Latency: 2 msec (2-88 msec ~45 msec)
+> ACL Data RX: Handle 2 flags 0x02 dlen 16                  #50 [hci0] 7.789386
+      L2CAP: Connection Response (0x03) ident 2 len 8
+        Destination CID: 64
+        Source CID: 64
+        Result: Connection successful (0x0000)
+        Status: No further information available (0x0000)
+> ACL Data RX: Handle 2 flags 0x02 dlen 16                  #51 [hci0] 7.789387
+      L2CAP: Configure Request (0x04) ident 29 len 8
+        Destination CID: 64
+        Flags: 0x0000
+        Option: Maximum Transmission Unit (0x01) [mandatory]
+          MTU: 679
+< ACL Data TX: Handle 2 flags 0x00 dlen 12                  #52 [hci0] 7.789401
+      L2CAP: Configure Request (0x04) ident 3 len 4
+        Destination CID: 64
+        Flags: 0x0000
+< ACL Data TX: Handle 2 flags 0x00 dlen 18                  #53 [hci0] 7.789406
+      L2CAP: Configure Response (0x05) ident 29 len 10
+        Source CID: 64
+        Flags: 0x0000
+        Result: Success (0x0000)
+        Option: Maximum Transmission Unit (0x01) [mandatory]
+          MTU: 679
+> HCI Event: Number of Completed Packets (0x13) plen 5      #54 [hci0] 7.793486
+        Num handles: 1
+        Handle: 2 Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+        Count: 1
+        #52: len 12 (24 Kb/s)
+        Latency: 4 msec (2-88 msec ~24 msec)
+> HCI Event: Number of Completed Packets (0x13) plen 5      #55 [hci0] 7.871487
+        Num handles: 1
+        Handle: 2 Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+        Count: 1
+        #53: len 18 (1 Kb/s)
+        Latency: 82 msec (2-88 msec ~53 msec)
+> ACL Data RX: Handle 2 flags 0x02 dlen 14                  #56 [hci0] 7.872384
+      L2CAP: Configure Response (0x05) ident 3 len 6
+        Source CID: 64
+        Flags: 0x0000
+        Result: Success (0x0000)
+> ACL Data RX: Handle 2 flags 0x02 dlen 18                  #57 [hci0] 7.872385
+      Channel: 64 len 14 [PSM 23 mode Basic (0x00)] {chan 0}
+      AVCTP Control: Command: type 0x00 label 1 PID 0x110e
+        AV/C: Status: address 0x48 opcode 0x00
+          Subunit: Panel
+          Opcode: Vendor Dependent
+          Company ID: 0x001958
+          AVRCP: GetCapabilities pt Single len 0x0001
+            CapabilityID: 0x03 (EventsID)
+< ACL Data TX: Handle 2 flags 0x00 dlen 12                  #58 [hci0] 8.373042
+      Channel: 64 len 8 [PSM 23 mode Basic (0x00)] {chan 0}
+      AVCTP Control: Command: type 0x00 label 0 PID 0x110e
+        AV/C: Control: address 0x48 opcode 0x7c
+          Subunit: Panel
+          Opcode: Passthrough
+          Operation: 0x46 (PAUSE Pressed)
+          Length: 0x00
+> HCI Event: Number of Completed Packets (0x13) plen 5      #59 [hci0] 8.389512
+        Num handles: 1
+        Handle: 2 Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+        Count: 1
+        #58: len 12 (6 Kb/s)
+        Latency: 16 msec (2-88 msec ~34 msec)
+        Channel: 64 [PSM 23 mode Basic (0x00)] {chan 0}
+        Channel Latency: 16 msec (16-16 msec ~16 msec)
+< ACL Data TX: Handle 2 flags 0x00 dlen 12                  #60 [hci0] 8.405551
+      L2CAP: Connection Request (0x02) ident 4 len 4
+        PSM: 1 (0x0001)
+        Source CID: 65
+> ACL Data RX: Handle 2 flags 0x02 dlen 12                  #61 [hci0] 8.472389
+      Channel: 64 len 8 [PSM 23 mode Basic (0x00)] {chan 0}
+      AVCTP Control: Response: type 0x00 label 0 PID 0x110e
+        AV/C: Accepted: address 0x48 opcode 0x7c
+          Subunit: Panel
+          Opcode: Passthrough
+          Operation: 0x46 (PAUSE Pressed)
+          Length: 0x00
+> ACL Data RX: Handle 2 flags 0x02 dlen 16                  #62 [hci0] 8.474382
+      L2CAP: Connection Response (0x03) ident 4 len 8
+        Destination CID: 65
+        Source CID: 65
+        Result: Connection successful (0x0000)
+        Status: No further information available (0x0000)
+< ACL Data TX: Handle 2 flags 0x00 dlen 12                  #63 [hci0] 8.474406
+      L2CAP: Configure Request (0x04) ident 5 len 4
+        Destination CID: 65
+        Flags: 0x0000
+> ACL Data RX: Handle 2 flags 0x02 dlen 16                  #64 [hci0] 8.476383
+      L2CAP: Configure Request (0x04) ident 30 len 8
+        Destination CID: 65
+        Flags: 0x0000
+        Option: Maximum Transmission Unit (0x01) [mandatory]
+          MTU: 679
+< ACL Data TX: Handle 2 flags 0x00 dlen 18                  #65 [hci0] 8.476396
+      L2CAP: Configure Response (0x05) ident 30 len 10
+        Source CID: 65
+        Flags: 0x0000
+        Result: Success (0x0000)
+        Option: Maximum Transmission Unit (0x01) [mandatory]
+          MTU: 679
+> HCI Event: Number of Completed Packets (0x13) plen 5      #66 [hci0] 8.679526
+        Num handles: 1
+        Handle: 2 Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+        Count: 1
+        #60: len 12 (0 Kb/s)
+        Latency: 273 msec (2-273 msec ~154 msec)
+> HCI Event: Number of Completed Packets (0x13) plen 5      #67 [hci0] 8.682516
+        Num handles: 1
+        Handle: 2 Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+        Count: 1
+        #63: len 12 (0 Kb/s)
+        Latency: 208 msec (2-273 msec ~181 msec)
+> HCI Event: Number of Completed Packets (0x13) plen 5      #68 [hci0] 8.684516
+        Num handles: 1
+        Handle: 2 Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+        Count: 1
+        #65: len 18 (0 Kb/s)
+        Latency: 208 msec (2-273 msec ~194 msec)
+> ACL Data RX: Handle 2 flags 0x02 dlen 14                  #69 [hci0] 8.685387
+      L2CAP: Configure Response (0x05) ident 5 len 6
+        Source CID: 65
+        Flags: 0x0000
+        Result: Success (0x0000)
+< ACL Data TX: Handle 2 flags 0x00 dlen 24                  #70 [hci0] 8.685474
+      Channel: 65 len 20 [PSM 1 mode Basic (0x00)] {chan 1}
+      SDP: Service Search Attribute Request (0x06) tid 0 len 15
+        Search pattern: [len 5]
+          Sequence (6) with 3 bytes [8 extra bits] len 5
+            UUID (3) with 2 bytes [0 extra bits] len 3
+              L2CAP (0x0100)
+        Max record count: 65535
+        Attribute list: [len 7]
+          Sequence (6) with 5 bytes [8 extra bits] len 7
+            Unsigned Integer (1) with 4 bytes [0 extra bits] len 5
+              0x0000ffff
+        Continuation state: 0
+> HCI Event: Number of Completed Packets (0x13) plen 5      #71 [hci0] 8.688519
+        Num handles: 1
+        Handle: 2 Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+        Count: 1
+        #70: len 24 (64 Kb/s)
+        Latency: 3 msec (2-273 msec ~98 msec)
+        Channel: 65 [PSM 1 mode Basic (0x00)] {chan 1}
+        Channel Latency: 3 msec (3-3 msec ~3 msec)
+> ACL Data RX: Handle 2 flags 0x02 dlen 304                 #72 [hci0] 8.773387
+      Channel: 65 len 300 [PSM 1 mode Basic (0x00)] {chan 1}
+      SDP: Service Search Attribute Response (0x07) tid 0 len 295
+        Attribute bytes: 288
+        Continuation state: 4
+        00 06 00 00                                      ....            
+< ACL Data TX: Handle 2 flags 0x00 dlen 28                  #73 [hci0] 8.773465
+      Channel: 65 len 24 [PSM 1 mode Basic (0x00)] {chan 1}
+      SDP: Service Search Attribute Request (0x06) tid 1 len 19
+        Search pattern: [len 5]
+          Sequence (6) with 3 bytes [8 extra bits] len 5
+            UUID (3) with 2 bytes [0 extra bits] len 3
+              L2CAP (0x0100)
+        Max record count: 65535
+        Attribute list: [len 7]
+          Sequence (6) with 5 bytes [8 extra bits] len 7
+            Unsigned Integer (1) with 4 bytes [0 extra bits] len 5
+              0x0000ffff
+        Continuation state: 4
+        00 06 00 00                                      ....            
+> ACL Data RX: Handle 2 flags 0x02 dlen 172                 #74 [hci0] 8.980383
+      Channel: 65 len 168 [PSM 1 mode Basic (0x00)] {chan 1}
+      SDP: Service Search Attribute Response (0x07) tid 1 len 163
+        Attribute bytes: 160
+        Continuation state: 0
+        Combined attribute bytes: 448
+          Attribute list: [len 74] {position 0}
+            Attribute: Service Record Handle (0x0000) [len 2]
+              0x00010001
+            Attribute: Service Class ID List (0x0001) [len 2]
+              UUID (3) with 2 bytes [0 extra bits] len 3
+                Audio Sink (0x110b)
+            Attribute: Protocol Descriptor List (0x0004) [len 2]
+              Sequence (6) with 6 bytes [16 extra bits] len 9
+                UUID (3) with 2 bytes [0 extra bits] len 3
+                  L2CAP (0x0100)
+                Unsigned Integer (1) with 2 bytes [0 extra bits] len 3
+                  0x0019
+              Sequence (6) with 6 bytes [16 extra bits] len 9
+                UUID (3) with 2 bytes [0 extra bits] len 3
+                  AVDTP (0x0019)
+                Unsigned Integer (1) with 2 bytes [0 extra bits] len 3
+                  0x0103
+            Attribute: Bluetooth Profile Descriptor List (0x0009) [len 2]
+              Sequence (6) with 6 bytes [16 extra bits] len 9
+                UUID (3) with 2 bytes [0 extra bits] len 3
+                  Advanced Audio Distribution (0x110d)
+                Unsigned Integer (1) with 2 bytes [0 extra bits] len 3
+                  0x0103
+            Attribute: Unknown (0x0311) [len 2]
+              0x0001
+            Attribute: Unknown (0x0100) [len 2]
+              JL_A2DP [len 7]
+          Attribute list: [len 65] {position 1}
+            Attribute: Service Record Handle (0x0000) [len 2]
+              0x00010002
+            Attribute: Service Class ID List (0x0001) [len 2]
+              UUID (3) with 2 bytes [0 extra bits] len 3
+                A/V Remote Control (0x110e)
+              UUID (3) with 2 bytes [0 extra bits] len 3
+                A/V Remote Control Controller (0x110f)
+            Attribute: Protocol Descriptor List (0x0004) [len 2]
+              Sequence (6) with 6 bytes [16 extra bits] len 9
+                UUID (3) with 2 bytes [0 extra bits] len 3
+                  L2CAP (0x0100)
+                Unsigned Integer (1) with 2 bytes [0 extra bits] len 3
+                  0x0017
+              Sequence (6) with 6 bytes [16 extra bits] len 9
+                UUID (3) with 2 bytes [0 extra bits] len 3
+                  AVCTP (0x0017)
+                Unsigned Integer (1) with 2 bytes [0 extra bits] len 3
+                  0x0104
+            Attribute: Bluetooth Profile Descriptor List (0x0009) [len 2]
+              Sequence (6) with 6 bytes [16 extra bits] len 9
+                UUID (3) with 2 bytes [0 extra bits] len 3
+                  A/V Remote Control (0x110e)
+                Unsigned Integer (1) with 2 bytes [0 extra bits] len 3
+                  0x0106
+            Attribute: Unknown (0x0311) [len 2]
+              0x0001
+          Attribute list: [len 62] {position 2}
+            Attribute: Service Record Handle (0x0000) [len 2]
+              0x00010005
+            Attribute: Service Class ID List (0x0001) [len 2]
+              UUID (3) with 2 bytes [0 extra bits] len 3
+                A/V Remote Control Target (0x110c)
+            Attribute: Protocol Descriptor List (0x0004) [len 2]
+              Sequence (6) with 6 bytes [16 extra bits] len 9
+                UUID (3) with 2 bytes [0 extra bits] len 3
+                  L2CAP (0x0100)
+                Unsigned Integer (1) with 2 bytes [0 extra bits] len 3
+                  0x0017
+              Sequence (6) with 6 bytes [16 extra bits] len 9
+                UUID (3) with 2 bytes [0 extra bits] len 3
+                  AVCTP (0x0017)
+                Unsigned Integer (1) with 2 bytes [0 extra bits] len 3
+                  0x0104
+            Attribute: Bluetooth Profile Descriptor List (0x0009) [len 2]
+              Sequence (6) with 6 bytes [16 extra bits] len 9
+                UUID (3) with 2 bytes [0 extra bits] len 3
+                  A/V Remote Control (0x110e)
+                Unsigned Integer (1) with 2 bytes [0 extra bits] len 3
+                  0x0105
+            Attribute: Unknown (0x0311) [len 2]
+              0x0002
+          Attribute list: [len 72] {position 3}
+            Attribute: Service Record Handle (0x0000) [len 2]
+              0x00010003
+            Attribute: Service Class ID List (0x0001) [len 2]
+              UUID (3) with 2 bytes [0 extra bits] len 3
+                Handsfree (0x111e)
+              UUID (3) with 2 bytes [0 extra bits] len 3
+                Generic Audio (0x1203)
+            Attribute: Protocol Descriptor List (0x0004) [len 2]
+              Sequence (6) with 3 bytes [16 extra bits] len 6
+                UUID (3) with 2 bytes [0 extra bits] len 3
+                  L2CAP (0x0100)
+              Sequence (6) with 5 bytes [16 extra bits] len 8
+                UUID (3) with 2 bytes [0 extra bits] len 3
+                  RFCOMM (0x0003)
+                Unsigned Integer (1) with 1 byte [0 extra bits] len 2
+                  0x04
+            Attribute: Bluetooth Profile Descriptor List (0x0009) [len 2]
+              Sequence (6) with 6 bytes [16 extra bits] len 9
+                UUID (3) with 2 bytes [0 extra bits] len 3
+                  Handsfree (0x111e)
+                Unsigned Integer (1) with 2 bytes [0 extra bits] len 3
+                  0x0108
+            Attribute: Unknown (0x0311) [len 2]
+              0x003f
+            Attribute: Unknown (0x0100) [len 2]
+              JL_HFP [len 6]
+          Attribute list: [len 63] {position 4}
+            Attribute: Service Record Handle (0x0000) [len 2]
+              0x00010004
+            Attribute: Service Class ID List (0x0001) [len 2]
+              UUID (3) with 2 bytes [0 extra bits] len 3
+                Serial Port (0x1101)
+            Attribute: Protocol Descriptor List (0x0004) [len 2]
+              Sequence (6) with 3 bytes [16 extra bits] len 6
+                UUID (3) with 2 bytes [0 extra bits] len 3
+                  L2CAP (0x0100)
+              Sequence (6) with 5 bytes [16 extra bits] len 8
+                UUID (3) with 2 bytes [0 extra bits] len 3
+                  RFCOMM (0x0003)
+                Unsigned Integer (1) with 1 byte [0 extra bits] len 2
+                  0x01
+            Attribute: Bluetooth Profile Descriptor List (0x0009) [len 2]
+              Sequence (6) with 6 bytes [16 extra bits] len 9
+                UUID (3) with 2 bytes [0 extra bits] len 3
+                  Serial Port (0x1101)
+                Unsigned Integer (1) with 2 bytes [0 extra bits] len 3
+                  0x0102
+            Attribute: Unknown (0x0100) [len 2]
+              JL_SPP [len 6]
+          Attribute list: [len 91] {position 5}
+            Attribute: Service Record Handle (0x0000) [len 2]
+              0x00010011
+            Attribute: Service Class ID List (0x0001) [len 2]
+              UUID (3) with 16 bytes [0 extra bits] len 17
+                0cf12d31-fac3-4553-bd80-d6832e7b395b
+            Attribute: Protocol Descriptor List (0x0004) [len 2]
+              Sequence (6) with 3 bytes [16 extra bits] len 6
+                UUID (3) with 2 bytes [0 extra bits] len 3
+                  L2CAP (0x0100)
+              Sequence (6) with 5 bytes [16 extra bits] len 8
+                UUID (3) with 2 bytes [0 extra bits] len 3
+                  RFCOMM (0x0003)
+                Unsigned Integer (1) with 1 byte [0 extra bits] len 2
+                  0x0a
+            Attribute: Bluetooth Profile Descriptor List (0x0009) [len 2]
+              Sequence (6) with 20 bytes [16 extra bits] len 23
+                UUID (3) with 16 bytes [0 extra bits] len 17
+                  0cf12d31-fac3-4553-bd80-d6832e7b395b
+                Unsigned Integer (1) with 2 bytes [0 extra bits] len 3
+                  0x0100
+            Attribute: Unknown (0x0100) [len 2]
+              JL_SPP [len 6]
+> HCI Event: Number of Completed Packets (0x13) plen 5      #75 [hci0] 8.980528
+        Num handles: 1
+        Handle: 2 Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+        Count: 1
+        #73: len 28 (1 Kb/s)
+        Latency: 207 msec (2-273 msec ~152 msec)
+        Channel: 65 [PSM 1 mode Basic (0x00)] {chan 1}
+        Channel Latency: 207 msec (3-207 msec ~105 msec)
+< ACL Data TX: Handle 2 flags 0x00 dlen 24                  #76 [hci0] 8.988197
+      Channel: 65 len 20 [PSM 1 mode Basic (0x00)] {chan 1}
+      SDP: Service Search Attribute Request (0x06) tid 2 len 15
+        Search pattern: [len 5]
+          Sequence (6) with 3 bytes [8 extra bits] len 5
+            UUID (3) with 2 bytes [0 extra bits] len 3
+              PnP Information (0x1200)
+        Max record count: 65535
+        Attribute list: [len 7]
+          Sequence (6) with 5 bytes [8 extra bits] len 7
+            Unsigned Integer (1) with 4 bytes [0 extra bits] len 5
+              0x0000ffff
+        Continuation state: 0
+< ACL Data TX: Handle 2 flags 0x00 dlen 12                  #77 [hci0] 9.073829
+      Channel: 64 len 8 [PSM 23 mode Basic (0x00)] {chan 0}
+      AVCTP Control: Command: type 0x00 label 1 PID 0x110e
+        AV/C: Control: address 0x48 opcode 0x7c
+          Subunit: Panel
+          Opcode: Passthrough
+          Operation: 0xc6 (PAUSE Released)
+          Length: 0x00
+> ACL Data RX: Handle 2 flags 0x02 dlen 70                  #78 [hci0] 9.173486
+      Channel: 65 len 66 [PSM 1 mode Basic (0x00)] {chan 1}
+      SDP: Service Search Attribute Response (0x07) tid 2 len 61
+        Attribute bytes: 58
+          Attribute list: [len 52] {position 0}
+            Attribute: Service Record Handle (0x0000) [len 2]
+              0x0001000a
+            Attribute: Service Class ID List (0x0001) [len 2]
+              UUID (3) with 2 bytes [0 extra bits] len 3
+                PnP Information (0x1200)
+            Attribute: Unknown (0x0200) [len 2]
+              0x0103
+            Attribute: Unknown (0x0201) [len 2]
+              0x05d6
+            Attribute: Unknown (0x0202) [len 2]
+              0x000a
+            Attribute: Unknown (0x0203) [len 2]
+              0x0240
+            Attribute: Unknown (0x0204) [len 2]
+              true
+            Attribute: Unknown (0x0205) [len 2]
+              0x0001
+        Continuation state: 0
+> HCI Event: Number of Completed Packets (0x13) plen 5      #79 [hci0] 9.181539
+        Num handles: 1
+        Handle: 2 Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+        Count: 1
+        #76: len 24 (0 Kb/s)
+        Latency: 193 msec (2-273 msec ~173 msec)
+        Channel: 65 [PSM 1 mode Basic (0x00)] {chan 1}
+        Channel Latency: 193 msec (3-207 msec ~149 msec)
+> HCI Event: Number of Completed Packets (0x13) plen 5      #80 [hci0] 9.183538
+        Num handles: 1
+        Handle: 2 Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+        Count: 1
+        #77: len 12 (0 Kb/s)
+        Latency: 109 msec (2-273 msec ~141 msec)
+        Channel: 64 [PSM 23 mode Basic (0x00)] {chan 0}
+        Channel Latency: 109 msec (16-109 msec ~63 msec)
+> ACL Data RX: Handle 2 flags 0x02 dlen 12                  #81 [hci0] 9.187388
+      Channel: 64 len 8 [PSM 23 mode Basic (0x00)] {chan 0}
+      AVCTP Control: Response: type 0x00 label 1 PID 0x110e
+        AV/C: Accepted: address 0x48 opcode 0x7c
+          Subunit: Panel
+          Opcode: Passthrough
+          Operation: 0xc6 (PAUSE Released)
+          Length: 0x00
+> HCI Event: LE Meta Event (0x3e) plen 57                   #82 [hci0] 9.917575
+      LE Extended Advertising Report (0x0d)
+        Num reports: 1
+        Entry 0
+          Event type: 0x0010
+            Props: 0x0010
+              Use legacy advertising PDUs
+            Data status: [0;32mComplete[0m
+          Legacy PDU Type: ADV_NONCONN_IND (0x0010)
+          Address type: Random (0x01)
+          Address: ED:E0:AF:C5:79:E3 (Static)
+          Primary PHY: LE 1M
+          Secondary PHY: No packets
+          SID: no ADI field (0xff)
+          TX power: 127 dBm
+          RSSI: -72 dBm (0xb8)
+          Periodic advertising interval: 0.00 msec (0x0000)
+          Direct address type: Public (0x00)
+          Direct address: 00:00:00:00:00:00 (OUI 00-00-00)
+          Data length: 0x1f
+        1e ff 4c 00 12 19 00 44 61 79 41 94 14 e8 35 d1  ..L....DayA...5.
+        86 a4 76 ed d5 eb b5 06 34 f9 38 c9 27 02 00     ..v.....4.8.'.. 
+        Company: Apple, Inc. (76)
+          Type: Unknown (18)
+          Data: 00446179419414e835d186a476edd5ebb50634f938c9270200
+@ MGMT Event: Device Found (0x0012) plen 45            {0x0001} [hci0] 9.917591
+        LE Address: ED:E0:AF:C5:79:E3 (Static)
+        RSSI: -72 dBm (0xb8)
+        Flags: 0x00000004
+          Not Connectable
+        Data length: 31
+        Company: Apple, Inc. (76)
+          Type: Unknown (18)
+          Data: 00446179419414e835d186a476edd5ebb50634f938c9270200
+< ACL Data TX: Handle 2 flags 0x00 dlen 12                 #83 [hci0] 10.775449
+      Channel: 64 len 8 [PSM 23 mode Basic (0x00)] {chan 0}
+      AVCTP Control: Command: type 0x00 label 2 PID 0x110e
+        AV/C: Control: address 0x48 opcode 0x7c
+          Subunit: Panel
+          Opcode: Passthrough
+          Operation: 0x44 (PLAY Pressed)
+          Length: 0x00
+> HCI Event: Number of Completed Packets (0x13) plen 5     #84 [hci0] 10.789602
+        Num handles: 1
+        Handle: 2 Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+        Count: 1
+        #83: len 12 (6 Kb/s)
+        Latency: 14 msec (2-273 msec ~77 msec)
+        Channel: 64 [PSM 23 mode Basic (0x00)] {chan 0}
+        Channel Latency: 14 msec (14-109 msec ~38 msec)
+> ACL Data RX: Handle 2 flags 0x02 dlen 12                 #85 [hci0] 10.872386
+      Channel: 64 len 8 [PSM 23 mode Basic (0x00)] {chan 0}
+      AVCTP Control: Response: type 0x00 label 2 PID 0x110e
+        AV/C: Accepted: address 0x48 opcode 0x7c
+          Subunit: Panel
+          Opcode: Passthrough
+          Operation: 0x44 (PLAY Pressed)
+          Length: 0x00
+< ACL Data TX: Handle 2 flags 0x00 dlen 12                 #86 [hci0] 11.405437
+      L2CAP: Disconnection Request (0x06) ident 6 len 4
+        Destination CID: 65
+        Source CID: 65
+> ACL Data RX: Handle 2 flags 0x02 dlen 12                 #87 [hci0] 11.474389
+      L2CAP: Disconnection Response (0x07) ident 6 len 4
+        Destination CID: 65
+        Source CID: 65
+< ACL Data TX: Handle 2 flags 0x00 dlen 12                 #88 [hci0] 11.476426
+      Channel: 64 len 8 [PSM 23 mode Basic (0x00)] {chan 0}
+      AVCTP Control: Command: type 0x00 label 3 PID 0x110e
+        AV/C: Control: address 0x48 opcode 0x7c
+          Subunit: Panel
+          Opcode: Passthrough
+          Operation: 0xc4 (PLAY Released)
+          Length: 0x00
+> HCI Event: Number of Completed Packets (0x13) plen 5     #89 [hci0] 11.679635
+        Num handles: 1
+        Handle: 2 Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+        Count: 1
+        #86: len 12 (0 Kb/s)
+        Latency: 274 msec (2-274 msec ~175 msec)
+> HCI Event: Number of Completed Packets (0x13) plen 5     #90 [hci0] 11.681628
+        Num handles: 1
+        Handle: 2 Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+        Count: 1
+        #88: len 12 (0 Kb/s)
+        Latency: 205 msec (2-274 msec ~190 msec)
+        Channel: 64 [PSM 23 mode Basic (0x00)] {chan 0}
+        Channel Latency: 205 msec (14-205 msec ~121 msec)
+> ACL Data RX: Handle 2 flags 0x02 dlen 12                 #91 [hci0] 11.683382
+      Channel: 64 len 8 [PSM 23 mode Basic (0x00)] {chan 0}
+      AVCTP Control: Response: type 0x00 label 3 PID 0x110e
+        AV/C: Accepted: address 0x48 opcode 0x7c
+          Subunit: Panel
+          Opcode: Passthrough
+          Operation: 0xc4 (PLAY Released)
+          Length: 0x00
+< ACL Data TX: Handle 2 flags 0x00 dlen 12                 #92 [hci0] 13.177672
+      Channel: 64 len 8 [PSM 23 mode Basic (0x00)] {chan 0}
+      AVCTP Control: Command: type 0x00 label 4 PID 0x110e
+        AV/C: Control: address 0x48 opcode 0x7c
+          Subunit: Panel
+          Opcode: Passthrough
+          Operation: 0x41 (VOLUME UP Pressed)
+          Length: 0x00
+> HCI Event: Number of Completed Packets (0x13) plen 5     #93 [hci0] 13.189694
+        Num handles: 1
+        Handle: 2 Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+        Count: 1
+        #92: len 12 (8 Kb/s)
+        Latency: 12 msec (2-274 msec ~101 msec)
+        Channel: 64 [PSM 23 mode Basic (0x00)] {chan 0}
+        Channel Latency: 12 msec (12-205 msec ~66 msec)
+> ACL Data RX: Handle 2 flags 0x02 dlen 12                 #94 [hci0] 13.272384
+      Channel: 64 len 8 [PSM 23 mode Basic (0x00)] {chan 0}
+      AVCTP Control: Response: type 0x00 label 4 PID 0x110e
+        AV/C: Accepted: address 0x48 opcode 0x7c
+          Subunit: Panel
+          Opcode: Passthrough
+          Operation: 0x41 (VOLUME UP Pressed)
+          Length: 0x00
+< ACL Data TX: Handle 2 flags 0x00 dlen 12                 #95 [hci0] 13.878452
+      Channel: 64 len 8 [PSM 23 mode Basic (0x00)] {chan 0}
+      AVCTP Control: Command: type 0x00 label 5 PID 0x110e
+        AV/C: Control: address 0x48 opcode 0x7c
+          Subunit: Panel
+          Opcode: Passthrough
+          Operation: 0xc1 (VOLUME UP Released)
+          Length: 0x00
+> ACL Data RX: Handle 2 flags 0x02 dlen 12                 #96 [hci0] 13.973390
+      Channel: 64 len 8 [PSM 23 mode Basic (0x00)] {chan 0}
+      AVCTP Control: Response: type 0x00 label 5 PID 0x110e
+        AV/C: Accepted: address 0x48 opcode 0x7c
+          Subunit: Panel
+          Opcode: Passthrough
+          Operation: 0xc1 (VOLUME UP Released)
+          Length: 0x00
+> HCI Event: Number of Completed Packets (0x13) plen 5     #97 [hci0] 13.979716
+        Num handles: 1
+        Handle: 2 Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+        Count: 1
+        #95: len 12 (0 Kb/s)
+        Latency: 101 msec (2-274 msec ~101 msec)
+        Channel: 64 [PSM 23 mode Basic (0x00)] {chan 0}
+        Channel Latency: 101 msec (12-205 msec ~84 msec)
+@ MGMT Event: Discovering (0x0013) plen 2             {0x0001} [hci0] 14.074658
+        Address type: 0x07
+          BR/EDR
+          LE Public
+          LE Random
+        Discovery: Disabled (0x00)
+< HCI Command: LE Set Extended Sca.. (0x08|0x0042) plen 6  #98 [hci0] 14.074742
+        Extended scan: Disabled (0x00)
+        Filter duplicates: Disabled (0x00)
+        Duration: 0 msec (0x0000)
+        Period: 0.00 sec (0x0000)
+> HCI Event: Command Complete (0x0e) plen 4                #99 [hci0] 14.075838
+      LE Set Extended Scan Enable (0x08|0x0042) ncmd 2
+        Status: Success (0x00)
+< ACL Data TX: Handle 2 flags 0x00 dlen 12                #100 [hci0] 15.580113
+      Channel: 64 len 8 [PSM 23 mode Basic (0x00)] {chan 0}
+      AVCTP Control: Command: type 0x00 label 6 PID 0x110e
+        AV/C: Control: address 0x48 opcode 0x7c
+          Subunit: Panel
+          Opcode: Passthrough
+          Operation: 0x42 (VOLUME DOWN Pressed)
+          Length: 0x00
+> HCI Event: Number of Completed Packets (0x13) plen 5    #101 [hci0] 15.591779
+        Num handles: 1
+        Handle: 2 Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+        Count: 1
+        #100: len 12 (8 Kb/s)
+        Latency: 11 msec (2-274 msec ~56 msec)
+        Channel: 64 [PSM 23 mode Basic (0x00)] {chan 0}
+        Channel Latency: 11 msec (11-205 msec ~47 msec)
+> ACL Data RX: Handle 2 flags 0x02 dlen 12                #102 [hci0] 15.673420
+      Channel: 64 len 8 [PSM 23 mode Basic (0x00)] {chan 0}
+      AVCTP Control: Response: type 0x00 label 6 PID 0x110e
+        AV/C: Accepted: address 0x48 opcode 0x7c
+          Subunit: Panel
+          Opcode: Passthrough
+          Operation: 0x42 (VOLUME DOWN Pressed)
+          Length: 0x00
+< ACL Data TX: Handle 2 flags 0x00 dlen 12                #103 [hci0] 16.280801
+      Channel: 64 len 8 [PSM 23 mode Basic (0x00)] {chan 0}
+      AVCTP Control: Command: type 0x00 label 7 PID 0x110e
+        AV/C: Control: address 0x48 opcode 0x7c
+          Subunit: Panel
+          Opcode: Passthrough
+          Operation: 0xc2 (VOLUME DOWN Released)
+          Length: 0x00
+> HCI Event: Number of Completed Packets (0x13) plen 5    #104 [hci0] 16.290802
+        Num handles: 1
+        Handle: 2 Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+        Count: 1
+        #103: len 12 (9 Kb/s)
+        Latency: 10 msec (2-274 msec ~33 msec)
+        Channel: 64 [PSM 23 mode Basic (0x00)] {chan 0}
+        Channel Latency: 10 msec (10-205 msec ~28 msec)
+> ACL Data RX: Handle 2 flags 0x02 dlen 12                #105 [hci0] 16.372387
+      Channel: 64 len 8 [PSM 23 mode Basic (0x00)] {chan 0}
+      AVCTP Control: Response: type 0x00 label 7 PID 0x110e
+        AV/C: Accepted: address 0x48 opcode 0x7c
+          Subunit: Panel
+          Opcode: Passthrough
+          Operation: 0xc2 (VOLUME DOWN Released)
+          Length: 0x00
+< ACL Data TX: Handle 2 flags 0x00 dlen 12                #106 [hci0] 16.981613
+      Channel: 64 len 8 [PSM 23 mode Basic (0x00)] {chan 0}
+      AVCTP Control: Command: type 0x00 label 0 PID 0x110e
+        AV/C: Control: address 0x48 opcode 0x7c
+          Subunit: Panel
+          Opcode: Passthrough
+          Operation: 0x4b (FORWARD Pressed)
+          Length: 0x00
+> HCI Event: Number of Completed Packets (0x13) plen 5    #107 [hci0] 16.990828
+        Num handles: 1
+        Handle: 2 Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+        Count: 1
+        #106: len 12 (10 Kb/s)
+        Latency: 9 msec (2-274 msec ~21 msec)
+        Channel: 64 [PSM 23 mode Basic (0x00)] {chan 0}
+        Channel Latency: 9 msec (9-205 msec ~19 msec)
+> ACL Data RX: Handle 2 flags 0x02 dlen 12                #108 [hci0] 17.072385
+      Channel: 64 len 8 [PSM 23 mode Basic (0x00)] {chan 0}
+      AVCTP Control: Response: type 0x00 label 0 PID 0x110e
+        AV/C: Accepted: address 0x48 opcode 0x7c
+          Subunit: Panel
+          Opcode: Passthrough
+          Operation: 0x4b (FORWARD Pressed)
+          Length: 0x00
+< ACL Data TX: Handle 2 flags 0x00 dlen 12                #109 [hci0] 17.682424
+      Channel: 64 len 8 [PSM 23 mode Basic (0x00)] {chan 0}
+      AVCTP Control: Command: type 0x00 label 1 PID 0x110e
+        AV/C: Control: address 0x48 opcode 0x7c
+          Subunit: Panel
+          Opcode: Passthrough
+          Operation: 0xcb (FORWARD Released)
+          Length: 0x00
+> HCI Event: Number of Completed Packets (0x13) plen 5    #110 [hci0] 17.690853
+        Num handles: 1
+        Handle: 2 Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+        Count: 1
+        #109: len 12 (12 Kb/s)
+        Latency: 8 msec (2-274 msec ~14 msec)
+        Channel: 64 [PSM 23 mode Basic (0x00)] {chan 0}
+        Channel Latency: 8 msec (8-205 msec ~13 msec)
+> ACL Data RX: Handle 2 flags 0x02 dlen 12                #111 [hci0] 17.772388
+      Channel: 64 len 8 [PSM 23 mode Basic (0x00)] {chan 0}
+      AVCTP Control: Response: type 0x00 label 1 PID 0x110e
+        AV/C: Accepted: address 0x48 opcode 0x7c
+          Subunit: Panel
+          Opcode: Passthrough
+          Operation: 0xcb (FORWARD Released)
+          Length: 0x00
+< ACL Data TX: Handle 2 flags 0x00 dlen 12                #112 [hci0] 18.683440
+      Channel: 64 len 8 [PSM 23 mode Basic (0x00)] {chan 0}
+      AVCTP Control: Command: type 0x00 label 1 PID 0x110e
+        AV/C: Control: address 0x48 opcode 0x7c
+          Subunit: Panel
+          Opcode: Passthrough
+          Operation: 0x4b (FORWARD Pressed)
+          Length: 0x00
+> HCI Event: Number of Completed Packets (0x13) plen 5    #113 [hci0] 18.691887
+        Num handles: 1
+        Handle: 2 Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+        Count: 1
+        #112: len 12 (12 Kb/s)
+        Latency: 8 msec (2-274 msec ~11 msec)
+        Channel: 64 [PSM 23 mode Basic (0x00)] {chan 0}
+        Channel Latency: 8 msec (8-205 msec ~11 msec)
+> ACL Data RX: Handle 2 flags 0x02 dlen 12                #114 [hci0] 18.777389
+      Channel: 64 len 8 [PSM 23 mode Basic (0x00)] {chan 0}
+      AVCTP Control: Response: type 0x00 label 1 PID 0x110e
+        AV/C: Accepted: address 0x48 opcode 0x7c
+          Subunit: Panel
+          Opcode: Passthrough
+          Operation: 0x4b (FORWARD Pressed)
+          Length: 0x00
+< ACL Data TX: Handle 2 flags 0x00 dlen 12                #115 [hci0] 19.384223
+      Channel: 64 len 8 [PSM 23 mode Basic (0x00)] {chan 0}
+      AVCTP Control: Command: type 0x00 label 2 PID 0x110e
+        AV/C: Control: address 0x48 opcode 0x7c
+          Subunit: Panel
+          Opcode: Passthrough
+          Operation: 0xcb (FORWARD Released)
+          Length: 0x00
+> HCI Event: Number of Completed Packets (0x13) plen 5    #116 [hci0] 19.390913
+        Num handles: 1
+        Handle: 2 Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+        Count: 1
+        #115: len 12 (16 Kb/s)
+        Latency: 6 msec (2-274 msec ~9 msec)
+        Channel: 64 [PSM 23 mode Basic (0x00)] {chan 0}
+        Channel Latency: 6 msec (6-205 msec ~8 msec)
+@ MGMT Command: Start Discovery (0x0023) plen 1       {0x0001} [hci0] 19.409429
+        Address type: 0x07
+          BR/EDR
+          LE Public
+          LE Random
+< HCI Command: LE Set Random Addr.. (0x08|0x0005) plen 6  #117 [hci0] 19.409451
+        Address: 1A:17:E7:78:CE:19 (Non-Resolvable)
+> HCI Event: Command Complete (0x0e) plen 4               #118 [hci0] 19.410914
+      LE Set Random Address (0x08|0x0005) ncmd 2
+        Status: Success (0x00)
+< HCI Command: LE Set Extended S.. (0x08|0x0041) plen 13  #119 [hci0] 19.410934
+        Own address type: Random (0x01)
+        Filter policy: Accept all advertisement (0x00)
+        PHYs: 0x05
+        Entry 0: LE 1M
+          Type: Active (0x01)
+          Interval: 22.500 msec (0x0024)
+          Window: 11.250 msec (0x0012)
+        Entry 1: LE Coded
+          Type: Active (0x01)
+          Interval: 67.500 msec (0x006c)
+          Window: 33.750 msec (0x0036)
+> HCI Event: Command Complete (0x0e) plen 4               #120 [hci0] 19.412910
+      LE Set Extended Scan Parameters (0x08|0x0041) ncmd 2
+        Status: Success (0x00)
+< HCI Command: LE Set Extended Sc.. (0x08|0x0042) plen 6  #121 [hci0] 19.412928
+        Extended scan: Enabled (0x01)
+        Filter duplicates: Enabled (0x01)
+        Duration: 0 msec (0x0000)
+        Period: 0.00 sec (0x0000)
+> HCI Event: Command Complete (0x0e) plen 4               #122 [hci0] 19.414910
+      LE Set Extended Scan Enable (0x08|0x0042) ncmd 2
+        Status: Success (0x00)
+@ MGMT Event: Discovering (0x0013) plen 2             {0x0001} [hci0] 19.414920
+        Address type: 0x07
+          BR/EDR
+          LE Public
+          LE Random
+        Discovery: Enabled (0x01)
+< HCI Command: Inquiry (0x01|0x0001) plen 5               #123 [hci0] 19.414932
+        Access code: 0x9e8b33 (General Inquiry)
+        Length: 10.24s (0x08)
+        Num responses: 0
+> HCI Event: Command Status (0x0f) plen 4                 #124 [hci0] 19.416910
+      Inquiry (0x01|0x0001) ncmd 2
+        Status: Success (0x00)
+@ MGMT Event: Command Complete (0x0001) plen 4        {0x0001} [hci0] 19.416923
+      Start Discovery (0x0023) plen 1
+        Status: Success (0x00)
+        Address type: 0x07
+          BR/EDR
+          LE Public
+          LE Random
+> HCI Event: LE Meta Event (0x3e) plen 112                #125 [hci0] 19.433913
+      LE Extended Advertising Report (0x0d)
+        Num reports: 2
+        Entry 0
+          Event type: 0x0013
+            Props: 0x0013
+              Connectable
+              Scannable
+              Use legacy advertising PDUs
+            Data status: [0;32mComplete[0m
+          Legacy PDU Type: ADV_IND (0x0013)
+          Address type: Public (0x00)
+          Address: F4:B6:2D:AC:DA:28 (Dongguan Huayin Electronic Technology Co., Ltd.)
+          Primary PHY: LE 1M
+          Secondary PHY: No packets
+          SID: no ADI field (0xff)
+          TX power: 127 dBm
+          RSSI: -58 dBm (0xc6)
+          Periodic advertising interval: 0.00 msec (0x0000)
+          Direct address type: Public (0x00)
+          Direct address: 00:00:00:00:00:00 (OUI 00-00-00)
+          Data length: 0x1f
+        02 01 06 09 ff f4 b6 2d ae ab e0 00 00 05 05 01  .......-........
+        8b f5 da 00 00 00 00 00 00 00 00 00 00 00 00     ............... 
+        Flags: 0x06
+          LE General Discoverable Mode
+          BR/EDR Not Supported
+        Company: not assigned (46836)
+          Data: 2daeabe00000
+        32-bit Service UUIDs (complete): 1 entry
+          Unknown (0xdaf58b01)
+        Entry 1
+          Event type: 0x001b
+            Props: 0x001b
+              Connectable
+              Scannable
+              Scan response
+              Use legacy advertising PDUs
+            Data status: [0;32mComplete[0m
+          Legacy PDU Type: SCAN_RSP to an ADV_SCAN_IND (0x001b)
+          Address type: Public (0x00)
+          Address: F4:B6:2D:AC:DA:28 (Dongguan Huayin Electronic Technology Co., Ltd.)
+          Primary PHY: LE 1M
+          Secondary PHY: No packets
+          SID: no ADI field (0xff)
+          TX power: 127 dBm
+          RSSI: -58 dBm (0xc6)
+          Periodic advertising interval: 0.00 msec (0x0000)
+          Direct address type: Public (0x00)
+          Direct address: 00:00:00:00:00:00 (OUI 00-00-00)
+          Data length: 0x1f
+        02 01 06 00 00 00 00 00 00 00 00 00 00 00 00 00  ................
+        00 00 00 00 00 00 00 00 00 00 00 00 00 00 00     ............... 
+        Flags: 0x06
+          LE General Discoverable Mode
+          BR/EDR Not Supported
+@ MGMT Event: Device Found (0x0012) plen 36           {0x0001} [hci0] 19.433924
+        LE Address: F4:B6:2D:AC:DA:28 (Dongguan Huayin Electronic Technology Co., Ltd.)
+        RSSI: -58 dBm (0xc6)
+        Flags: 0x00000000
+        Data length: 22
+        Flags: 0x06
+          LE General Discoverable Mode
+          BR/EDR Not Supported
+        Company: not assigned (46836)
+          Data: 2daeabe00000
+        32-bit Service UUIDs (complete): 1 entry
+          Unknown (0xdaf58b01)
+        Flags: 0x06
+          LE General Discoverable Mode
+          BR/EDR Not Supported
+> ACL Data RX: Handle 2 flags 0x02 dlen 12                #126 [hci0] 19.476389
+      Channel: 64 len 8 [PSM 23 mode Basic (0x00)] {chan 0}
+      AVCTP Control: Response: type 0x00 label 2 PID 0x110e
+        AV/C: Accepted: address 0x48 opcode 0x7c
+          Subunit: Panel
+          Opcode: Passthrough
+          Operation: 0xcb (FORWARD Released)
+          Length: 0x00
+< ACL Data TX: Handle 2 flags 0x00 dlen 12                #127 [hci0] 20.385645
+      Channel: 64 len 8 [PSM 23 mode Basic (0x00)] {chan 0}
+      AVCTP Control: Command: type 0x00 label 2 PID 0x110e
+        AV/C: Control: address 0x48 opcode 0x7c
+          Subunit: Panel
+          Opcode: Passthrough
+          Operation: 0x4b (FORWARD Pressed)
+          Length: 0x00
+> ACL Data RX: Handle 2 flags 0x02 dlen 12                #128 [hci0] 20.485386
+      Channel: 64 len 8 [PSM 23 mode Basic (0x00)] {chan 0}
+      AVCTP Control: Response: type 0x00 label 2 PID 0x110e
+        AV/C: Accepted: address 0x48 opcode 0x7c
+          Subunit: Panel
+          Opcode: Passthrough
+          Operation: 0x4b (FORWARD Pressed)
+          Length: 0x00
+> HCI Event: Number of Completed Packets (0x13) plen 5    #129 [hci0] 20.583962
+        Num handles: 1
+        Handle: 2 Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+        Count: 1
+        #127: len 12 (0 Kb/s)
+        Latency: 198 msec (2-274 msec ~103 msec)
+        Channel: 64 [PSM 23 mode Basic (0x00)] {chan 0}
+        Channel Latency: 198 msec (6-205 msec ~103 msec)
+< ACL Data TX: Handle 2 flags 0x00 dlen 12                #130 [hci0] 21.086548
+      Channel: 64 len 8 [PSM 23 mode Basic (0x00)] {chan 0}
+      AVCTP Control: Command: type 0x00 label 3 PID 0x110e
+        AV/C: Control: address 0x48 opcode 0x7c
+          Subunit: Panel
+          Opcode: Passthrough
+          Operation: 0xcb (FORWARD Released)
+          Length: 0x00
+> ACL Data RX: Handle 2 flags 0x02 dlen 12                #131 [hci0] 21.184399
+      Channel: 64 len 8 [PSM 23 mode Basic (0x00)] {chan 0}
+      AVCTP Control: Response: type 0x00 label 3 PID 0x110e
+        AV/C: Accepted: address 0x48 opcode 0x7c
+          Subunit: Panel
+          Opcode: Passthrough
+          Operation: 0xcb (FORWARD Released)
+          Length: 0x00
+> HCI Event: Number of Completed Packets (0x13) plen 5    #132 [hci0] 21.483999
+        Num handles: 1
+        Handle: 2 Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+        Count: 1
+        #130: len 12 (0 Kb/s)
+        Latency: 397 msec (2-397 msec ~250 msec)
+        Channel: 64 [PSM 23 mode Basic (0x00)] {chan 0}
+        Channel Latency: 397 msec (6-397 msec ~250 msec)
+< ACL Data TX: Handle 2 flags 0x00 dlen 12                #133 [hci0] 22.087993
+      Channel: 64 len 8 [PSM 23 mode Basic (0x00)] {chan 0}
+      AVCTP Control: Command: type 0x00 label 10 PID 0x110e
+        AV/C: Control: address 0x48 opcode 0x7c
+          Subunit: Panel
+          Opcode: Passthrough
+          Operation: 0x4c (BACKWARD Pressed)
+          Length: 0x00
+> ACL Data RX: Handle 2 flags 0x02 dlen 12                #134 [hci0] 22.184388
+      Channel: 64 len 8 [PSM 23 mode Basic (0x00)] {chan 0}
+      AVCTP Control: Response: type 0x00 label 10 PID 0x110e
+        AV/C: Accepted: address 0x48 opcode 0x7c
+          Subunit: Panel
+          Opcode: Passthrough
+          Operation: 0x4c (BACKWARD Pressed)
+          Length: 0x00
+> HCI Event: Number of Completed Packets (0x13) plen 5    #135 [hci0] 22.284023
+        Num handles: 1
+        Handle: 2 Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+        Count: 1
+        #133: len 12 (0 Kb/s)
+        Latency: 196 msec (2-397 msec ~223 msec)
+        Channel: 64 [PSM 23 mode Basic (0x00)] {chan 0}
+        Channel Latency: 196 msec (6-397 msec ~223 msec)
+< ACL Data TX: Handle 2 flags 0x00 dlen 12                #136 [hci0] 22.788813
+      Channel: 64 len 8 [PSM 23 mode Basic (0x00)] {chan 0}
+      AVCTP Control: Command: type 0x00 label 11 PID 0x110e
+        AV/C: Control: address 0x48 opcode 0x7c
+          Subunit: Panel
+          Opcode: Passthrough
+          Operation: 0xcc (BACKWARD Released)
+          Length: 0x00
+> ACL Data RX: Handle 2 flags 0x02 dlen 12                #137 [hci0] 22.884488
+      Channel: 64 len 8 [PSM 23 mode Basic (0x00)] {chan 0}
+      AVCTP Control: Response: type 0x00 label 11 PID 0x110e
+        AV/C: Accepted: address 0x48 opcode 0x7c
+          Subunit: Panel
+          Opcode: Passthrough
+          Operation: 0xcc (BACKWARD Released)
+          Length: 0x00
+> HCI Event: Number of Completed Packets (0x13) plen 5    #138 [hci0] 22.983060
+        Num handles: 1
+        Handle: 2 Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+        Count: 1
+        #136: len 12 (0 Kb/s)
+        Latency: 194 msec (2-397 msec ~208 msec)
+        Channel: 64 [PSM 23 mode Basic (0x00)] {chan 0}
+        Channel Latency: 194 msec (6-397 msec ~208 msec)
+< ACL Data TX: Handle 2 flags 0x00 dlen 15                #139 [hci0] 24.490981
+      Channel: 64 len 11 [PSM 23 mode Basic (0x00)] {chan 0}
+      AVCTP Control: Command: type 0x00 label 12 PID 0x110e
+        AV/C: Control: address 0x48 opcode 0x30
+          Subunit: Panel
+          Opcode: Unit Info
+        ff ff ff ff ff                                   .....           
+> HCI Event: Number of Completed Packets (0x13) plen 5    #140 [hci0] 24.581112
+        Num handles: 1
+        Handle: 2 Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+        Count: 1
+        #139: len 15 (1 Kb/s)
+        Latency: 90 msec (2-397 msec ~149 msec)
+        Channel: 64 [PSM 23 mode Basic (0x00)] {chan 0}
+        Channel Latency: 90 msec (6-397 msec ~149 msec)
+> HCI Event: LE Meta Event (0x3e) plen 57                 #141 [hci0] 25.955168
+      LE Extended Advertising Report (0x0d)
+        Num reports: 1
+        Entry 0
+          Event type: 0x0010
+            Props: 0x0010
+              Use legacy advertising PDUs
+            Data status: [0;32mComplete[0m
+          Legacy PDU Type: ADV_NONCONN_IND (0x0010)
+          Address type: Random (0x01)
+          Address: ED:E0:AF:C5:79:E3 (Static)
+          Primary PHY: LE 1M
+          Secondary PHY: No packets
+          SID: no ADI field (0xff)
+          TX power: 127 dBm
+          RSSI: -78 dBm (0xb2)
+          Periodic advertising interval: 0.00 msec (0x0000)
+          Direct address type: Public (0x00)
+          Direct address: 00:00:00:00:00:00 (OUI 00-00-00)
+          Data length: 0x1f
+        1e ff 4c 00 12 19 00 44 61 79 41 94 14 e8 35 d1  ..L....DayA...5.
+        86 a4 76 ed d5 eb b5 06 34 f9 38 c9 27 02 00     ..v.....4.8.'.. 
+        Company: Apple, Inc. (76)
+          Type: Unknown (18)
+          Data: 00446179419414e835d186a476edd5ebb50634f938c9270200
+@ MGMT Event: Device Found (0x0012) plen 45           {0x0001} [hci0] 25.955195
+        LE Address: ED:E0:AF:C5:79:E3 (Static)
+        RSSI: -78 dBm (0xb2)
+        Flags: 0x00000004
+          Not Connectable
+        Data length: 31
+        Company: Apple, Inc. (76)
+          Type: Unknown (18)
+          Data: 00446179419414e835d186a476edd5ebb50634f938c9270200
+< ACL Data TX: Handle 2 flags 0x00 dlen 12                #142 [hci0] 27.193457
+      L2CAP: Disconnection Request (0x06) ident 7 len 4
+        Destination CID: 64
+        Source CID: 64
+> ACL Data RX: Handle 2 flags 0x02 dlen 12                #143 [hci0] 27.275385
+      L2CAP: Disconnection Response (0x07) ident 7 len 4
+        Destination CID: 64
+        Source CID: 64
+> HCI Event: Number of Completed Packets (0x13) plen 5    #144 [hci0] 27.290205
+        Num handles: 1
+        Handle: 2 Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+        Count: 1
+        #142: len 12 (1 Kb/s)
+        Latency: 96 msec (2-397 msec ~123 msec)
+> HCI Event: Disconnect Complete (0x05) plen 4            #145 [hci0] 27.519218
+        Status: Success (0x00)
+        Handle: 2 Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+        Reason: Remote User Terminated Connection (0x13)
+@ MGMT Event: Device Disconnected (0x000c) plen 8     {0x0001} [hci0] 27.519232
+        BR/EDR Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+        Reason: Connection terminated by remote host (0x03)
+@ MGMT Command: Unpair Device (0x001b) plen 8         {0x0001} [hci0] 27.519317
+        BR/EDR Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+        Disconnect: Enabled (0x01)
+@ MGMT Event: Command Complete (0x0001) plen 10       {0x0001} [hci0] 27.538459
+      Unpair Device (0x001b) plen 7
+        Status: Not Paired (0x06)
+        BR/EDR Address: F4:B6:2D:AE:AB:E0 (Dongguan Huayin Electronic Technology Co., Ltd.)
+> HCI Event: Inquiry Complete (0x01) plen 1               #146 [hci0] 29.658291
+        Status: Success (0x00)
+@ MGMT Event: Discovering (0x0013) plen 2             {0x0001} [hci0] 29.946392
+        Address type: 0x07
+          BR/EDR
+          LE Public
+          LE Random
+        Discovery: Disabled (0x00)
+< HCI Command: LE Set Extended Sc.. (0x08|0x0042) plen 6  #147 [hci0] 29.946407
+        Extended scan: Disabled (0x00)
+        Filter duplicates: Disabled (0x00)
+        Duration: 0 msec (0x0000)
+        Period: 0.00 sec (0x0000)
+> HCI Event: Command Complete (0x0e) plen 4               #148 [hci0] 29.947303
+      LE Set Extended Scan Enable (0x08|0x0042) ncmd 2
+        Status: Success (0x00)

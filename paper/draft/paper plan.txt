@@ -1,0 +1,69 @@
+Shaping Your Research Idea
+The KU Leuven approach that made WhisperPair publishable had three things:
+
+A specific, novel research question — not "is Bluetooth insecure" but "does Fast Pair correctly enforce the pairing state predicate?"
+A testable, measurable hypothesis — vulnerable devices could be hijacked in under ~40 seconds
+A responsible disclosure process — vendors were notified before publication
+
+For classic Bluetooth + consumer audio devices, here are angles that are genuinely under-explored and publishable:
+Angle A — Pairing mode enforcement across low-cost chipsets
+The Airoha RACE paper showed that cheap chipsets often skip authentication checks. You could systematically test whether budget Bluetooth speakers and earbuds (the category you were originally thinking about) enforce pairing mode before accepting A2DP or AVRCP connections. This is a direct parallel to the WhisperPair pairing state predicate test.
+Angle B — AVRCP command injection without pairing
+AVRCP is the profile that controls audio — play, pause, volume, track skip. If a device accepts AVRCP commands without authenticated pairing, that's a meaningful, demonstrable vulnerability. You could build a harness similar to BlueToolkit but focused specifically on audio control profiles.
+Angle C — LMP state machine fuzzing on budget SoCs
+BrakTooth showed that cheap chipsets often have broken LMP implementations. A focused fuzzing study on a specific category of consumer audio SoCs (Airoha, JL, QCC series) could find new DoS or crash vulnerabilities.
+---
+The recon output will show you which Bluetooth profiles the device exposes, what its pairing capabilities are, and what authentication mode it reports. That alone will tell you whether your target devices have interesting attack surface before you commit to a research direction.
+
+What You Need Hardware-Wise
+
+A Linux laptop with a standard Bluetooth adapter for most tests
+An ESP32 board (~$5) if you want to do LMP-level fuzzing (the BrakTooth sniffer runs on it)
+The devices you want to test — ideally a range of budget speakers/earbuds across different SoCs
+
+
+The Ethics Framework to Follow
+Model it exactly on what the KU Leuven and Airoha RACE teams did:
+
+Test only devices you own
+Document everything — dates, firmware versions, exact test conditions
+Before publishing, contact vendors through their security disclosure channels and give them 90 days (standard coordinated disclosure window)
+Bluetooth SIG has a vulnerability reporting page at bluetooth.com/learn-about-bluetooth/key-attributes/bluetooth-security/reporting-security/ if you find a spec-level issue rather than a vendor-specific one
+---
+Finding 1 — The Chipset Identification: JL (Jieli)
+Every service name starts with JL_. That prefix identifies the Bluetooth chipset manufacturer: Jieli Technology (杰理科技), a Chinese fabless semiconductor company. This is not Airoha, not Qualcomm, not CSR.
+This matters enormously for your research scope. Jieli chips are in a huge proportion of budget Bluetooth audio devices globally — cheap earbuds, no-name speakers, off-brand headphones. If you find a vulnerability in how Jieli's SDK handles AVRCP authentication, it potentially affects tens of millions of devices across hundreds of brands, not just this one pair of earbuds.
+
+Finding 2 — SDP Records Returned Without Pairing
+This is the most important result in the entire output. Look at what happened:
+sdptool browse F4:B6:2D:AE:AB:E0    → empty (used L2CAP channel 1, standard SDP browse)
+sudo sdptool records F4:B6:2D:AE:AB:E0 → full service list (used direct SDP query)
+The device returned its complete service record table to an unauthenticated, unpaired host. That means you now know exactly what attack surface is available before establishing any authenticated link. Every profile listed below was disclosed without authentication.
+
+Finding 3 — Full Profile Breakdown
+Here is what the device is advertising and what each profile means for your research:
+JL_A2DP — Audio Sink (PSM 25, AVDTP 1.3)
+This is the audio receiving profile — how music gets streamed to the earbuds. The relevant question for your research: can you connect to AVDTP and send audio commands without pairing?
+AVRCP — AV Remote (PSM 23, AVCTP 1.4) — Two records
+This is your primary target for Angle B. There are actually two AVRCP records:
+
+Record 0x10002: AV Remote + AV Remote Controller (version 1.6) — the earbuds acting as a remote controller
+Record 0x10005: AV Remote Target (version 1.5) — the earbuds as a target you send commands to
+
+The Target record is what you want. This is what receives play/pause/volume commands. PSM 23 is the L2CAP port number you'll connect to.
+JL_HFP — Handsfree Profile (RFCOMM Channel 4)
+Telephone/call audio. Less relevant to Angle B but interesting — unauthenticated HFP connections could allow an attacker to intercept or inject into phone calls.
+JL_SPP — Serial Port Profile (RFCOMM Channel 1)
+A serial data channel. Jieli uses this for proprietary control commands — firmware updates, EQ settings, feature configuration. This is a significant secondary finding. Remember how the Airoha RACE protocol was essentially a proprietary channel that exposed dangerous debug commands? This could be the Jieli equivalent.
+JL_SPP with UUID 0cf12d31-fac3-4553-bd80-d6832e7b395b (RFCOMM Channel 10)
+A second proprietary channel with a custom 128-bit UUID. This is almost certainly the Soundcore app communication channel. Unknown protocol, unknown commands. This is potentially your most interesting research target after AVRCP.
+JL_HID — Human Interface Device (PSM 17)
+Unexpected on earbuds. HID typically means keyboard/mouse. Some audio devices implement HID for media key control as an alternative to AVRCP. The fact that it's exposed is notable.
+
+Finding 4 — l2ping 100% Loss
+no response from F4:B6:2D:AE:AB:E0: id 0, 1, 2
+The device did not respond to L2CAP echo requests. This does NOT mean it refused the connection — it means the device has echo request response disabled (common on consumer devices). Crucially, it still responded to the SDP query, so L2CAP connectivity clearly works. The device is simply selectively non-responsive to pings.
+
+Finding 5 — Device Disappeared in bluetoothctl
+[DEL] Device F4:B6:2D:AE:AB:E0 soundcore R50i NC
+The earbuds went back in the case or timed out during the bluetoothctl session. This tells you the discovery window is limited — the device only stays discoverable for a short period. Keep that in mind for your testing workflow.

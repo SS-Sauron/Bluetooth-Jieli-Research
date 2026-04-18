@@ -1,0 +1,14 @@
+2026/04/18 05:04:47: info: btscanner starting
+2026/04/18 05:04:47: error: get_max_devices(): no valid HCI devices were found
+2026/04/18 05:04:47: info: btscanner shutting down
+2026/04/18 05:04:58: info: btscanner starting
+2026/04/18 05:04:58: error: get_max_devices(): no valid HCI devices were found
+2026/04/18 05:04:58: info: btscanner shutting down
+2026/04/18 05:06:10: info: btscanner starting
+2026/04/18 05:06:32: info: threader_start::pthread_create(): created thread -1335888192
+2026/04/18 05:07:36: info: threader_reap::pthread_join(): joined thread -1335888192
+2026/04/18 05:07:54: info: btscanner shutting down
+2026/04/18 05:07:56: info: btscanner starting
+2026/04/18 05:08:32: info: threader_start::pthread_create(): created thread -1449134400
+2026/04/18 05:10:27: info: threader_reap::pthread_join(): joined thread -1449134400
+2026/04/18 05:10:27: info: btscanner shutting down

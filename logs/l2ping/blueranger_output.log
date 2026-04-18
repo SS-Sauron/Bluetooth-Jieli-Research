@@ -1,0 +1,7 @@
+Script started on 2026-04-18 06:09:07+02:00 [COMMAND="sudo blueranger hci0 F4:B6:2D:AE:AB:E0" TERM="xterm-256color" TTY="/dev/pts/2" COLUMNS="181" LINES="53"]
+[sudo] password for graves: 
+Sorry, try again.
+[sudo] password for graves: 
+sudo: blueranger: command not found
+
+Script done on 2026-04-18 06:09:23+02:00 [COMMAND_EXIT_CODE="1"]
