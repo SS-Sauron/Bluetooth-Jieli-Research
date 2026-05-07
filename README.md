@@ -8,6 +8,63 @@
 
 ## 📑 Table of Contents
 
+## 🛠️ Environment Setup & Installation
+
+### Prerequisites
+
+- **Python 3.8+**
+- **pip** (Python package manager)
+- **ESP-IDF v6.1** (for firmware builds only)
+- **Linux/macOS** (Windows users may need WSL2)
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/SS-Sauron/Bluetooth-Jieli-Research.git
+cd Bluetooth-Jieli-Research
+```
+
+### 2. Install Python Dependencies
+
+```bash
+pip install -r requirements.txt
+
+# Optional: For development (linting, testing)
+pip install -e ".[dev]"
+```
+
+**What is installed:**
+- `pybluez` – Bluetooth socket library for Python scripts
+
+### 3. ESP-IDF Setup (Firmware Only)
+
+If building the ESP32 firmware, install ESP-IDF v6.1:
+
+```bash
+# Install ESP-IDF v6.1
+git clone --branch v6.1 https://github.com/espressif/esp-idf.git ~/esp-idf
+cd ~/esp-idf
+./install.sh
+source ./export.sh
+
+# Verify installation
+idf.py --version  # Should show v6.1
+```
+
+For detailed ESP-IDF setup, see [official docs](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html).
+
+### 4. Running Python Scripts
+
+```bash
+# Example: Run AVRCP injection test
+python3 scripts/avrcp/avrcp_pause.py
+```
+
+### 5. Building Firmware
+
+See [firmware/esp32_avrcp_console/README.md](firmware/esp32_avrcp_console/README.md) for detailed build instructions.
+
+
 - [Confirmed Research Findings](#-confirmed-research-findings)
 - [The 8‑Byte PASSTHROUGH Frame](#-the-8‑byte-passthrough-frame)
 - [Attack Matrix](#️-attack-matrix)
