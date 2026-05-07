@@ -205,11 +205,11 @@ bluetoothctl devices
 ## 🧬 The 8-Byte PASSTHROUGH Frame
 
 ```
-Byte:  0    1    2    3    4    5    6    7
-     ┌────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┐
-     │AVCTP│ PID │ PID │ctype│ sub │ opc │data │state│
-     │hdr  │(hi) │(lo) │0x00 │0x48 │0x7C │     │flag │
-     └────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┘
+Byte:  0     1     2     3     4     5     6     7
+     ┌──────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┐
+     │AVCTP │ PID │ PID │ctype│ sub │ opc │data │state│
+     │hdr   │(hi) │(lo) │0x00 │0x48 │0x7C │     │flag │
+     └──────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┘
 ```
 
 **Field Breakdown:**
@@ -328,16 +328,16 @@ Bluetooth-Jieli-Research/
 ├── tools/                             # Build artifacts
 │
 ├── Root Configuration Files:
-│   ├── README.md                      # ✅ This file — main entry point
-│   ├── setup.py                       # ✅ Python package configuration
-│   ├── requirements.txt               # ✅ Runtime dependencies (pybluez)
-│   ├── Makefile                       # ✅ Build automation (make install, make lint, etc.)
-│   ├── .gitignore                     # ✅ Git exclusions (build/, *.pyc, etc.)
+│   ├── README.md                       # ✅ This file — main entry point
+│   ├── setup.py                        # ✅ Python package configuration
+│   ├── requirements.txt                # ✅ Runtime dependencies (pybluez)
+│   ├── Makefile                        # ✅ Build automation (make install, make lint, etc.)
+│   ├── .gitignore                      # ✅ Git exclusions (build/, *.pyc, etc.)
 │   ├── .github/workflows/lint-test.yml # ✅ GitHub Actions CI/CD (auto-lint on push)
-│   ├── CONTRIBUTING.md                # Contributing guidelines
-│   ├── ATTACK_VECTORS.md              # Attack vectors summary
-│   ├── CHANGELOG.md                   # Version history
-│   └── LICENSE                        # MIT License
+│   ├── CONTRIBUTING.md                 # Contributing guidelines
+│   ├── ATTACK_VECTORS.md               # Attack vectors summary
+│   ├── CHANGELOG.md                    # Version history
+│   └── LICENSE                         # MIT License
 ```
 
 ---
@@ -409,9 +409,6 @@ A: These vulnerabilities apply to Jieli-based devices in general, though specifi
 
 **Q: Why doesn't this work on my earbuds?**  
 A: Different Jieli firmwares may have different opcodes or require different device states. See `TROUBLESHOOTING.md` (or open an issue).
-
-**Q: Is this a zero-day exploit?**  
-A: Not anymore—it's disclosed. We've contacted Jieli and the OEM (Anker/Soundcore). See the responsible disclosure timeline in the research paper.
 
 ---
 
