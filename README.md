@@ -3,9 +3,23 @@
 [![Category: Security Research](https://img.shields.io/badge/Category-Security_Research-blue)](https://github.com/SS-Sauron/Bluetooth-Jieli-Research)
 [![ESP-IDF v6.1](https://img.shields.io/badge/ESP--IDF-v6.1-green)](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+## 📑 Table of Contents
+
+- [Confirmed Research Findings](#-confirmed-research-findings)
+- [The 8‑Byte PASSTHROUGH Frame](#-the-8‑byte-passthrough-frame)
+- [Attack Matrix](#️-attack-matrix)
+- [Quick Start — ESP32 AVRCP Console](#-quick-start--esp32-avrcp-console)
+- [Repository Structure](#-repository-structure)
+- [Documentation](#-documentation)
+- [Future Work](#-future-work)
+- [Disclaimer](#️-disclaimer)
+- [License](#-license)
 [![CWE-306](https://img.shields.io/badge/CWE-306-critical)](https://cwe.mitre.org/data/definitions/306.html)
 
 > **A systematic security analysis of Jieli‑based Bluetooth audio devices, revealing unauthenticated AVRCP volume injection, a proprietary JL‑SPP protocol, weak PRNG, and the definitive 8‑byte structure of the AVRCP PASSTHROUGH command.**
+
+![Repository Preview](assets/preview.png)
 
 ---
 
@@ -27,6 +41,14 @@
 | 12 | **AVRCP PASSTHROUGH is Exactly 8 Bytes** — Extensive empirical testing confirms that the AVRCP PASSTHROUGH command is an 8‑byte AV/C frame over AVCTP. The 9‑byte variant is a vendor‑specific extension. | — | `docs/avrcp-technical-reference.md` |
 
 ---
+
+
+```mermaid
+flowchart LR
+    L2CAP["L2CAP PSM 23"] --> AVCTP["AVCTP Header (3 bytes)"]
+    AVCTP --> AVC["AV/C PASSTHROUGH (5 bytes)"]
+    AVC --> TARGET["Target Response:<br/>ACCEPTED (0x09) or REJECTED (0x0A)"]
+```
 
 ## 🧬 The 8‑Byte PASSTHROUGH Frame
 
@@ -100,6 +122,27 @@ avrcp> help
 This repository is intended solely for security research and educational purposes. All findings were obtained by testing on devices owned by the researcher. Unauthorized access to devices you do not own is illegal. A responsible disclosure process with Jieli Technology and Anker Innovations is ongoing. The authors assume no liability for misuse of the information provided herein.
 
 ---
+
+
+## 📖 Citation
+
+If you use this work in your research, please cite:
+
+```bibtex
+@misc{bluetooth-jieli-research,
+  author       = {Sauron, S.S.},
+  title        = {Unauthenticated Protocol Exposure and PRNG Weakness in Jieli-Based Bluetooth Audio Devices},
+  year         = {2026},
+  howpublished = {\url{https://github.com/SS-Sauron/Bluetooth-Jieli-Research}},
+}
+```
+
+
+## 🎥 Demonstration
+
+Watch the attacks in action:
+
+[![ESP32 AVRCP Console Demo](https://img.youtube.com/vi/YOUR_VIDEO_ID/0.jpg)](https://www.youtube.com/watch?v=YOUR_VIDEO_ID)
 
 ## 📄 License
 

@@ -35,3 +35,8 @@ idf.py -p /dev/ttyUSB0 flash monitor
 * `reboot` – forcefully terminates the firmware and restarts the chip (Ctrl+\)
 * `disconnect` – cleanly closes the Bluetooth connection without rebooting (hang‑up)
 ```
+
+## Hardware Requirements
+- ESP32‑WROOM‑32D development board (or any original ESP32)
+- USB data cable
+- Soundcore R50i NC earbuds (or any Jieli‑based Bluetooth audio device)
