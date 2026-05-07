@@ -104,5 +104,4 @@ This repository is intended solely for security research and educational purpose
 ## 📄 License
 
 MIT. See `LICENSE`.
-ENDOFFILE
 ```
