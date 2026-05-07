@@ -24,3 +24,4 @@ logs/
 *.swo
 .DS_Store
 Thumbs.db
+.codex
