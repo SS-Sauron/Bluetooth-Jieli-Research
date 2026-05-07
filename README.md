@@ -17,7 +17,7 @@
 - [Future Work](#-future-work)
 - [Disclaimer](#️-disclaimer)
 - [License](#-license)
-- [![CWE-306](https://img.shields.io/badge/CWE-306-critical)](https://cwe.mitre.org/data/definitions/306.html)
+     [![CWE-306](https://img.shields.io/badge/CWE-306-critical)](https://cwe.mitre.org/data/definitions/306.html)
 
 > **A systematic security analysis of Jieli‑based Bluetooth audio devices, revealing unauthenticated AVRCP volume injection, a proprietary JL‑SPP protocol, weak PRNG, and the definitive 8‑byte structure of the AVRCP PASSTHROUGH command.**
 
