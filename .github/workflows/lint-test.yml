@@ -1,143 +1,154 @@
-name: Lint & Test
-
-on:
+---
+"on":
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
 
 jobs:
   lint:
     name: Code Quality (Lint & Style)
     runs-on: ubuntu-latest
     continue-on-error: true
-    
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
-    
-    - name: Install linting tools
-      run: |
-        pip install pylint black flake8
-    
-    - name: Black (Code Style Check)
-      run: black --check scripts/ --exclude="(__pycache__|\.eggs|\.git)"
-      continue-on-error: true
-    
-    - name: Pylint (Code Quality)
-      run: pylint scripts/ --exit-zero
-      continue-on-error: true
-    
-    - name: Flake8 (PEP8 Compliance)
-      run: flake8 scripts/ --exit-zero
-      continue-on-error: true
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install linting tools
+        run: pip install pylint black flake8
+      - name: Black (Code Style Check)
+        run: >
+          black --check scripts/
+          --exclude="(__pycache__|\.eggs|\.git)"
+        continue-on-error: true
+      - name: Pylint (Code Quality)
+        run: pylint scripts/ --exit-zero
+        continue-on-error: true
+      - name: Flake8 (PEP8 Compliance)
+        run: flake8 scripts/ --exit-zero
+        continue-on-error: true
 
-  dependencies:
-    name: Dependency Validation
+  dependency-audit:
+    name: Dependency Completeness Check
     runs-on: ubuntu-latest
-    
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
-    
-    - name: Install dependencies
-      run: pip install -r requirements.txt
-    
-    - name: Verify imports
-      run: python3 -c "import pybluez; print(f'✅ pybluez OK')"
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Verify all imports are installable
+        run: |
+          IMPORTS=$(grep -rhoP \
+            "^(?:from|import)\s+([a-zA-Z_]\w*)" scripts/ | \
+            sed -E 's/^(from|import) +([a-zA-Z_]\w*).*/\2/' | \
+            sort -u)
+          MISSING=""
+          for mod in $IMPORTS; do
+            python -c "import $mod" 2>/dev/null || \
+              MISSING="$MISSING $mod"
+          done
+          if [ -n "$MISSING" ]; then
+            echo "❌ MISSING dependencies: $MISSING"
+            exit 1
+          else
+            echo "✅ All dependencies satisfied"
+          fi
 
   firmware-validate:
     name: Firmware Structure Validation
     runs-on: ubuntu-latest
-    
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Check CMakeLists.txt syntax
-      run: |
-        if grep -q "cmake_minimum_required" firmware/esp32_avrcp_console/CMakeLists.txt && \
-           grep -q "project(" firmware/esp32_avrcp_console/CMakeLists.txt; then
-          echo "✅ CMakeLists.txt structure OK"
-        else
-          echo "❌ CMakeLists.txt malformed"
-          exit 1
-        fi
-    
-    - name: Validate sdkconfig.defaults
-      run: |
-        if grep -q "CONFIG_BT_ENABLED=y" firmware/esp32_avrcp_console/sdkconfig.defaults && \
-           grep -q "CONFIG_BT_CLASSIC_ENABLED=y" firmware/esp32_avrcp_console/sdkconfig.defaults; then
-          echo "✅ sdkconfig.defaults OContext: I am developing a security research repository for Bluetooth Jieli chipsets.
+      - uses: actions/checkout@v4
+      - name: Check CMakeLists.txt syntax
+        run: |
+          if grep -q "cmake_minimum_required" \
+            firmware/esp32_avrcp_console/CMakeLists.txt && \
+            grep -q "project(" \
+            firmware/esp32_avrcp_console/CMakeLists.txt; then
+            echo "✅ CMakeLists.txt structure OK"
+          else
+            echo "❌ CMakeLists.txt malformed"
+            exit 1
+          fi
+      - name: Validate sdkconfig.defaults
+        run: |
+          if grep -q "CONFIG_BT_ENABLED=y" \
+            firmware/esp32_avrcp_console/sdkconfig.defaults && \
+            grep -q "CONFIG_BT_CLASSIC_ENABLED=y" \
+            firmware/esp32_avrcp_console/sdkconfig.defaults; then
+            echo "✅ sdkconfig.defaults OK"
+          else
+            echo "⚠️  Missing expected Bluetooth configs"
+          fi
+      - name: Check .gitignore coverage
+        run: |
+          if grep -q "^build/$" \
+            firmware/esp32_avrcp_console/.gitignore && \
+            grep -q "^sdkconfig" \
+            firmware/esp32_avrcp_console/.gitignore; then
+            echo "✅ ESP32 .gitignore OK"
+          else
+            echo "⚠️  .gitignore may need updates"
+          fi
 
-Task: Analyze my current @workspace structure and file organization.
-
-    Standardize Layout: Does this follow the "Security Research" best practices (e.g., separating /firmware, /scripts, and /docs)? If any files are misplaced, suggest the exact mv commands to move them.
-
-    Dependency Management: I have Python scripts in /scripts. Suggest the creation of a requirements.txt or setup.py if they are missing to make the repo "one-click" installable.
-
-    Firmware Integrity: Check the /firmware/esp32_avrcp_console directory. Does it have the necessary .gitignore (to exclude build/ and sdkconfig) and CMakeLists.txt structure for a standard ESP-IDF project?
-
-    Documentation Audit: Look at README.md. Suggest a "Getting Started" or "Environment Setup" section that specifically mentions installing the ESP-IDF v6.1 and Python dependencies.
-
-    Workflow Improvements: Suggest a .github/workflows YAML file that could automatically lint my Python scripts or verify the firmware builds.
-
-Goal: Make this repo look like a professional tool that other researchers can easily clone, build, and contribute to.K"
-        else
-          echo "⚠️  Missing expected Bluetooth configs"
-        fi
-    
-    - name: Check .gitignore coverage
-      run: |
-        if grep -q "^build/$" firmware/esp32_avrcp_console/.gitignore && \
-           grep -q "^sdkconfig" firmware/esp32_avrcp_console/.gitignore; then
-          echo "✅ ESP32 .gitignore OK"
-        else
-          echo "⚠️  .gitignore may need updates"
-        fi
+  firmware-build:
+    name: ESP32 Firmware Build (ESP‑IDF v6.1)
+    runs-on: ubuntu-latest
+    container: espressif/idf:release-v6.1
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build firmware
+        run: |
+          cd firmware/esp32_avrcp_console
+          idf.py set-target esp32
+          idf.py build
+      - name: Upload firmware binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: esp32-firmware
+          path: firmware/esp32_avrcp_console/build/
 
   tests:
     name: Unit Tests
     runs-on: ubuntu-latest
     continue-on-error: true
-    
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
-    
-    - name: Install test dependencies
-      run: |
-        pip install -r requirements.txt
-        pip install pytest
-    
-    - name: Run pytest
-      run: pytest tests/ -v --tb=short || echo "⚠️  No test suite yet"
-      continue-on-error: true
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install test dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest
+      - name: Run pytest
+        run: pytest tests/ -v --tb=short || echo "⚠️  No test suite yet"
+        continue-on-error: true
 
   summary:
     name: Build Status Summary
     runs-on: ubuntu-latest
-    needs: [lint, dependencies, firmware-validate, tests]
+    needs:
+      - lint
+      - dependency-audit
+      - firmware-validate
+      - tests
+      - firmware-build
     if: always()
-    
     steps:
-    - name: ✅ All Checks Complete
-      run: |
-        echo "🎯 Workflow Summary:"
-        echo "  - Code Lint:      ${{ needs.lint.result }}"
-        echo "  - Dependencies:   ${{ needs.dependencies.result }}"
-        echo "  - Firmware:       ${{ needs.firmware-validate.result }}"
-        echo "  - Tests:          ${{ needs.tests.result }}"
-        echo ""
-        echo "📊 Repository status: Ready for merge"
+      - name: ✅ All Checks Complete
+        run: |
+          echo "🎯 Workflow Summary:"
+          echo "  - Code Lint:      ${{ needs.lint.result }}"
+          echo "  - Dependencies:   ${{ needs.dependency-audit.result }}"
+          echo "  - Firmware Struct: ${{ needs.firmware-validate.result }}"
+          echo "  - Firmware Build: ${{ needs.firmware-build.result }}"
+          echo "  - Tests:          ${{ needs.tests.result }}"
+          echo ""
+          echo "📊 Repository status: Ready for merge"

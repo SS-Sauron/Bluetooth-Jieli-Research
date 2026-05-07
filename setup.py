@@ -11,6 +11,7 @@ setup(
     packages=find_packages(),
     install_requires=[
         "pybluez>=0.23",
+        "bleak>=0.21.0",
     ],
     extras_require={
         "dev": [
