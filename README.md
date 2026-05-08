@@ -1,7 +1,7 @@
 # 🔐 Bluetooth Jieli Research
 
 [![Category: Security Research](https://img.shields.io/badge/Category-Security_Research-blue)](https://github.com/SS-Sauron/Bluetooth-Jieli-Research)
-[![CWE](https://img.shields.io/badge/CWE-...)](https://cwe.mitre.org/...)
+[![CWEs](https://img.shields.io/badge/CWEs-12%20findings-red)](https://cwe.mitre.org/data/index.html)
 [![ESP-IDF v6.1](https://img.shields.io/badge/ESP--IDF-v6.1-green)](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
