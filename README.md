@@ -87,6 +87,9 @@ An attacker (who doesn't even need special equipment) notices your earbuds are n
 
 ## ⚡ Quick Start (5‑minute setup)
 
+### Prerequisites (Linux)
+sudo apt update && sudo apt install libbluetooth-dev
+
 ### 1. Clone and install Python dependencies
 git clone https://github.com/SS-Sauron/Bluetooth-Jieli-Research.git
 cd Bluetooth-Jieli-Research
