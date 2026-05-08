@@ -1,7 +1,9 @@
-+---------------------------------------------------------------------------------------------+
-|                                BLUETOOTH JIELI RESEARCH                                     |
-|                    Classic BR/EDR | JL-SPP | AVRCP | ESP32 | owned-device lab               |
-+---------------------------------------------------------------------------------------------+
+```text
++----------------------------------------------------------------------------------------------------------------------+
+|                                      BLUETOOTH JIELI RESEARCH                                                        |
+|                          Classic BR/EDR | JL-SPP | AVRCP | ESP32 | owned-device lab                                  |
++----------------------------------------------------------------------------------------------------------------------+
+```
 
 # 🔐 Bluetooth Jieli Research
 
@@ -211,6 +213,18 @@ honest.
 | O-03 | JL-SPP channel 10 is exposed but quiet. | `data/results_ch10_auth.txt`, `data/results_ch10_fuzz.txt` |
 | O-04 | MAC spoofing did not bypass active baseband behavior. | `ATTACK_VECTORS.md`, `firmware/esp32_avrcp_console/` |
 | O-05 | BLE HID media keys require pairing. | `scripts/ble/ble_media_keys.py`, `data/results_hid.txt` |
+
+```markdown
+# 🧬 AVRCP Packet Breakdown
+
+The 8‑byte AVCTP frame used for PASSTHROUGH commands (values are an example):
++---------+-------+-------+-------+-------+-------+-------+-------+
+| Byte 0  | B1    | B2    | B3    | B4    | B5    | B6    | B7    |
++---------+-------+-------+-------+-------+-------+-------+-------+
+| AVCTP   | PID-H | PID-L | ctype | Sub   | Op    | Data  | State |
+| (0x00)  | (11)  | (0E)  | (00)  | (48)  | (7C)  | (41)  | (00)  |
++---------+-------+-------+-------+-------+-------+-------+-------+
+```
 
 **Observation ledger**
 
