@@ -39,8 +39,14 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
-      - name: Install dependencies
-        run: pip install -r requirements.txt
+      - name: Install system packages (for pybluez)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libbluetooth-dev
+      - name: Install Python dependencies
+        run: |
+          pip install "setuptools<58" wheel
+          pip install --no-build-isolation -r requirements.txt
       - name: Verify all imports are installable
         run: |
           IMPORTS=$(grep -rhoP \
