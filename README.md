@@ -5,27 +5,45 @@
 [![Tested Target: Soundcore R50i NC](https://img.shields.io/badge/Tested_Target-Soundcore_R50i_NC-lightgrey)](#research-scope)
 [![ESP-IDF](https://img.shields.io/badge/ESP--IDF-v6.1_local%20%7C%20v6.0_CI-green)](#compatibility)
 
-Security research on unauthenticated Bluetooth Classic behavior observed on a
-Soundcore R50i NC headset using a Jieli chipset and firmware v01.65.
+Bluetooth audio gear usually looks quiet from the outside: pair it, play music,
+forget it exists. This repository is the opposite view: a low-level field lab
+for poking at the Classic Bluetooth control paths, vendor SPP channels, timing
+behavior, and trust boundaries exposed by one Jieli-based headset.
+
+The confirmed target is the Soundcore R50i NC on firmware v01.65. The tone is
+practical and hands-on, but the claim boundary stays tight: this is evidence
+from owned-device testing, not a blanket statement about every Jieli product.
+
+> 🕶️ Field note: this project lives in the space between consumer earbuds,
+> commodity radios, and the debug interfaces that should not be reachable from
+> the street.
+
+**Signal map**
+
+- 🎧 Target: Soundcore R50i NC, firmware v01.65
+- 📡 Surface: Bluetooth Classic BR/EDR, with limited BLE side quests
+- 🔌 Main finds: unauthenticated AVRCP behavior and exposed JL-SPP service paths
+- 🧪 Proof: Python PoCs, ESP32 firmware, and captured result files
+- 🟡 Disclosure: coordinated disclosure in progress
 
 ## Status
 
 | Field | Value |
 | :--- | :--- |
-| Target tested | Soundcore R50i NC |
+| Target tested | 🎧 Soundcore R50i NC |
 | Firmware tested | v01.65 |
 | Chipset family | Jieli |
-| Methodology | Black-box protocol testing with commodity Bluetooth hardware |
-| Protocols tested | Bluetooth Classic BR/EDR, limited BLE discovery and HID checks |
-| Disclosure | Coordinated disclosure in progress |
-| Claim boundary | Confirmed findings apply to the tested target and firmware only |
+| Methodology | 🧰 Black-box protocol testing with commodity Bluetooth hardware |
+| Protocols tested | 📡 Bluetooth Classic BR/EDR, limited BLE discovery and HID checks |
+| Disclosure | 🟡 Coordinated disclosure in progress |
+| Claim boundary | ✅ Confirmed findings apply to the tested target and firmware only |
 
 ## Responsible Use and Disclosure
 
-This repository is for authorized security research on devices you own or have
-explicit permission to test. The proof-of-concept scripts can transmit Bluetooth
-control traffic and may change the state of nearby devices if misused. Do not
-run them against third-party equipment.
+This is a research bench, not a drive-by toolkit. Use it only on devices you own
+or have explicit permission to test. The proof-of-concept scripts can transmit
+Bluetooth control traffic and may change the state of nearby devices if misused.
+Do not run them against third-party equipment.
 
 The research is currently in coordinated disclosure. Public claims in this
 README are intentionally limited to observations reproduced on the tested
@@ -50,10 +68,10 @@ future validation targets, but they are not claimed as affected unless tested.
 ## Executive Summary
 
 This project evaluates Bluetooth protocol exposure on the Soundcore R50i NC
-running firmware v01.65. Testing found that the device accepts selected
-Bluetooth Classic control connections from an unpaired host within radio range.
-The highest-impact confirmed behavior is unauthenticated AVRCP volume control
-over L2CAP PSM 23 and unauthenticated access to a proprietary JL-SPP service on
+running firmware v01.65. The short version: the headset trusted more radio-side
+traffic than a normal user would expect from an unpaired host. Testing found
+selected Bluetooth Classic control paths reachable from within radio range,
+including AVRCP behavior over L2CAP PSM 23 and a proprietary JL-SPP service on
 RFCOMM channel 1.
 
 The repository contains Python proof-of-concept scripts, ESP32 firmware, and
@@ -61,6 +79,13 @@ captured result files that document the observed behavior. The scripts are
 operator-focused so another researcher can reproduce the tests on owned
 hardware, but the security claims remain scoped to the single tested device and
 firmware.
+
+**What makes this interesting**
+
+- 🎚️ Volume/control behavior crossed a trust boundary that should be boring.
+- 🔌 A vendor-specific RFCOMM surface accepted unauthenticated connections.
+- ⏱️ Opcode timing and response patterns gave the hidden protocol a shape.
+- 🧱 Some attempted paths failed, and those negative results are documented too.
 
 ## Research Scope
 
@@ -74,48 +99,159 @@ firmware.
 | Out of scope | Vendor source review, firmware extraction, attacks against third-party devices |
 
 This work should not be read as a universal statement about all Jieli-based
-products. It is evidence that the tested device exposes security-sensitive
-interfaces without the authentication expected by a user who has paired the
-headset only with their own phone.
+products. It is a clean signal from one tested device: security-sensitive
+interfaces were reachable without the authentication a user would expect after
+pairing the headset only with their own phone.
 
 ## Finding Taxonomy
 
-The project separates security findings from supporting observations:
+The project separates the sharp edges from the lab dust:
 
-- Confirmed security findings: behavior with a direct security impact on the
+- 🛡️ Confirmed security findings: behavior with a direct security impact on the
   tested target.
-- Research observations: protocol behavior that supports analysis but is not by
+- 🔎 Research observations: protocol behavior that supports analysis but is not by
   itself a vulnerability.
-- Tooling and protocol notes: scripts, firmware, packet layouts, and workflow
+- 🧰 Tooling and protocol notes: scripts, firmware, packet layouts, and workflow
   details used to reproduce the research.
-- Negative results: experiments that did not produce the attempted bypass.
+- 🧱 Negative results: experiments that did not produce the attempted bypass.
 
 ## Confirmed Security Findings
 
-| ID | Finding | Protocol | Preconditions | Impact | Evidence | CWE |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| F-01 | Unauthenticated AVRCP control connection accepts selected PASSTHROUGH commands on L2CAP PSM 23 | Classic AVRCP | Attacker-controlled Bluetooth Classic host within range; target powered on | Unpaired host can affect media-control behavior observed on the headset/phone path, including volume changes on the tested setup | `scripts/avrcp/avrcp_pause.py`, `data/results_avrcp.txt`, `docs/avrcp-technical-reference.md` | CWE-306 |
-| F-02 | Split trust boundary between transport controls and volume controls | Classic AVRCP | Same as F-01; phone connected during playback | Volume commands were accepted where other media commands were filtered or behaved differently, indicating inconsistent authorization across control classes | `data/results_avrcp.txt`, `firmware/esp32_avrcp_console/` | CWE-306 |
-| F-03 | Proprietary JL-SPP service accepts unauthenticated RFCOMM connections | Classic RFCOMM/JL-SPP | Bluetooth Classic host within range; target address known or discovered | RFCOMM channels 1 and 10 accepted connections without pairing; channel 1 returned structured responses to probes | `scripts/jl_spp/channel_scanner`, `scripts/jl_spp/jl_spp_opcode_scan.py`, `data/results_opcode_full.txt` | CWE-306 |
-| F-04 | JL-SPP channel 1 exposes opcode-dependent responses | Classic RFCOMM/JL-SPP | Successful channel 1 connection | The device responded to all 256 tested opcode values, creating an unauthenticated protocol surface for fingerprinting and further analysis | `scripts/jl_spp/jl_spp_opcode_scan.py`, `data/results_opcode_scan.txt`, `data/results_opcode_full.txt` | CWE-200 |
-| F-05 | JL-SPP response timing varies by opcode class | Classic RFCOMM/JL-SPP | Successful channel 1 connection; repeated opcode probes | Response latency clusters can reveal protocol state or handler differences without authentication | `scripts/jl_spp/jl_timing_analysis.py`, `scripts/jl_spp/jl_full_timing_scan.py` | CWE-208 |
-| F-06 | JL-SPP response stream shows weak pseudo-random behavior and reset patterns | Classic RFCOMM/JL-SPP | Successful channel 1 connection; repeated probes | Generated values showed repeatable structure and reset behavior during testing, reducing confidence that the channel uses cryptographic randomness | `scripts/jl_spp/jl_prng_period.py`, `scripts/jl_spp/jl_reset_pattern.py`, `data/results_reset.txt` | CWE-338 |
+These are the sharp findings reproduced on the tested Soundcore R50i NC
+firmware. Severity reflects the local research impact on this target, not a
+vendor-wide rating.
+
+**Impact snapshot**
+
+- 🔴 Critical: unauthenticated proprietary JL-SPP surface exposed over RFCOMM.
+- 🟠 High: unpaired Classic Bluetooth host can reach AVRCP control behavior.
+- 🟠 High: volume and transport controls do not share a clean trust boundary.
+- 🟡 Medium: opcode responses and timing leak enough shape to map hidden logic.
+
+### F-01 - High - Unauthenticated AVRCP Control Path
+
+- **Core issue:** An unpaired host can open the Classic AVRCP control channel on
+  L2CAP PSM 23 and send selected PASSTHROUGH commands.
+- **Why it matters:** The tested headset accepted radio-side control traffic
+  that should be gated by pairing or an equivalent authorization boundary.
+- **Preconditions:** Bluetooth Classic host within range; target powered on.
+- **Evidence:** `scripts/avrcp/avrcp_pause.py`, `data/results_avrcp.txt`,
+  `docs/avrcp-technical-reference.md`.
+- **CWE:** CWE-306.
+
+### F-02 - High - Split Trust Boundary for Volume Control
+
+- **Core issue:** Volume commands were accepted where other media controls were
+  filtered or behaved differently.
+- **Why it matters:** The device/phone path treated volume as a softer target
+  than transport controls, creating an inconsistent authorization boundary.
+- **Preconditions:** Same setup as F-01; phone connected during playback.
+- **Evidence:** `data/results_avrcp.txt`, `firmware/esp32_avrcp_console/`.
+- **CWE:** CWE-306.
+
+### F-03 - Critical - Exposed Proprietary JL-SPP Service
+
+- **Core issue:** RFCOMM channels 1 and 10 accepted connections without pairing;
+  channel 1 returned structured responses to probes.
+- **Why it matters:** A vendor-specific service reachable without
+  authentication is the highest-risk surface found in this work. It exposes
+  hidden device logic directly to nearby Classic Bluetooth hosts.
+- **Preconditions:** Bluetooth Classic host within range; target address known
+  or discovered.
+- **Evidence:** `scripts/jl_spp/channel_scanner`,
+  `scripts/jl_spp/jl_spp_opcode_scan.py`, `data/results_opcode_full.txt`.
+- **CWE:** CWE-306.
+
+### F-04 - High - Full Opcode Response Surface on JL-SPP Channel 1
+
+- **Core issue:** All 256 tested opcode values produced device responses.
+- **Why it matters:** Even without full protocol documentation, the response
+  surface is enough to fingerprint behavior, cluster handlers, and drive deeper
+  reverse engineering.
+- **Preconditions:** Successful unauthenticated RFCOMM channel 1 connection.
+- **Evidence:** `scripts/jl_spp/jl_spp_opcode_scan.py`,
+  `data/results_opcode_scan.txt`, `data/results_opcode_full.txt`.
+- **CWE:** CWE-200.
+
+### F-05 - Medium - Timing Side Channel Across JL-SPP Opcodes
+
+- **Core issue:** Response latency varied by opcode class during repeated
+  probes.
+- **Why it matters:** Timing clusters leak information about hidden handler
+  paths and protocol state without requiring authentication.
+- **Preconditions:** Successful channel 1 connection; repeated opcode probes.
+- **Evidence:** `scripts/jl_spp/jl_timing_analysis.py`,
+  `scripts/jl_spp/jl_full_timing_scan.py`.
+- **CWE:** CWE-208.
+
+### F-06 - Critical - Weak Randomness and Reset Patterns
+
+- **Core issue:** JL-SPP response data showed repeatable structure and reset
+  behavior during testing.
+- **Why it matters:** A proprietary channel that combines unauthenticated access
+  with weak pseudo-random behavior is a serious design smell. It reduces
+  confidence that challenge-like values are cryptographically meaningful.
+- **Preconditions:** Successful channel 1 connection; repeated probes.
+- **Evidence:** `scripts/jl_spp/jl_prng_period.py`,
+  `scripts/jl_spp/jl_reset_pattern.py`, `data/results_reset.txt`.
+- **CWE:** CWE-338.
 
 ## Research Observations
 
-| ID | Observation | Category | Evidence | Notes |
-| :--- | :--- | :--- | :--- | :--- |
-| O-01 | AVRCP PASSTHROUGH command format was confirmed as an 8-byte AV/C frame over AVCTP in the tested path | Protocol note | `docs/avrcp-technical-reference.md` | Supports reproduction of F-01 and F-02 |
-| O-02 | Sending a UNIT INFO request caused the tested device to close the L2CAP connection | Protocol behavior | `scripts/avrcp/avrcp_pause.py` | Useful for state-machine analysis; not classified as a standalone vulnerability |
-| O-03 | JL-SPP RFCOMM channel 10 accepted a connection but did not respond to simple probes | Negative result | `data/results_ch10_auth.txt`, `data/results_ch10_fuzz.txt` | Treated as an exposed but not fully characterized surface |
-| O-04 | MAC spoofing attempts against an actively connected phone did not bypass baseband behavior | Negative result | `ATTACK_VECTORS.md`, `firmware/esp32_avrcp_console/` | Included to document a tested path that did not produce the intended bypass |
-| O-05 | BLE HID media-key control requires pairing/user acceptance | Adjacent BLE behavior | `scripts/ble/ble_media_keys.py`, `data/results_hid.txt` | Not an unauthenticated finding; kept as context for media-control trust boundaries |
+These are not filler. They are the edges of the map: protocol primitives,
+negative results, and trust-boundary clues that keep the confirmed findings
+honest.
+
+### O-01 - AVRCP PASSTHROUGH Frame Shape
+
+- **Observation:** The tested path used an 8-byte AV/C frame over AVCTP for
+  AVRCP PASSTHROUGH commands.
+- **Why it matters:** This is the packet primitive behind F-01 and F-02.
+- **Evidence:** `docs/avrcp-technical-reference.md`.
+
+### O-02 - UNIT INFO Closes the L2CAP Session
+
+- **Observation:** Sending a UNIT INFO request caused the tested device to close
+  the L2CAP connection.
+- **Why it matters:** This gives the AVRCP state machine a visible edge for
+  follow-up analysis.
+- **Evidence:** `scripts/avrcp/avrcp_pause.py`.
+
+### O-03 - JL-SPP Channel 10 Is Exposed but Quiet
+
+- **Observation:** RFCOMM channel 10 accepted a connection but did not respond
+  to simple probes.
+- **Why it matters:** It is still an unauthenticated exposed surface, even if
+  the simple probe set did not unlock useful behavior.
+- **Evidence:** `data/results_ch10_auth.txt`, `data/results_ch10_fuzz.txt`.
+
+### O-04 - MAC Spoofing Did Not Bypass Active Baseband Behavior
+
+- **Observation:** Spoofing attempts against an actively connected phone did not
+  produce the intended bypass.
+- **Why it matters:** Negative results matter; this documents a path that did
+  not work under the tested conditions.
+- **Evidence:** `ATTACK_VECTORS.md`, `firmware/esp32_avrcp_console/`.
+
+### O-05 - BLE HID Media Keys Require Pairing
+
+- **Observation:** BLE HID media-key control requires pairing or user approval.
+- **Why it matters:** This is a different trust model from the unauthenticated
+  Classic Bluetooth findings, and should not be mixed with them.
+- **Evidence:** `scripts/ble/ble_media_keys.py`, `data/results_hid.txt`.
 
 ## Proof-of-Concept Reproduction
 
 Run the following only against devices you own or are authorized to test. The
 default scripts include addresses from the test device used in this research;
 edit the target constants before reproducing on your own hardware.
+
+**Operator notes**
+
+- 🧭 Record the target firmware, host OS, adapter, distance, and device state.
+- 🔁 Run probes more than once; Bluetooth state machines can be moody.
+- 🧯 Stop if the device is not yours, not in your lab, or not explicitly in
+  scope.
 
 ### Python Environment
 
@@ -146,6 +282,8 @@ Verify the imports used by the scripts:
 python -c "import bluetooth; print('bluetooth module OK')"
 python -c "import bleak; print('bleak OK')"
 ```
+
+If setup gets noisy, check `TROUBLESHOOTING.md` before changing the scripts.
 
 ### Classic Bluetooth Prerequisites
 
@@ -178,8 +316,8 @@ python scripts/jl_spp/channel_scanner
 ```
 
 Expected result on the tested firmware: channels 1 and 10 accepted RFCOMM
-connections without prior pairing. Channel 1 was then used for opcode-response
-mapping:
+connections without prior pairing. Channel 1 is where the tunnel starts to light
+up, so it was used for opcode-response mapping:
 
 ```bash
 python scripts/jl_spp/jl_spp_opcode_scan.py
@@ -202,7 +340,8 @@ python scripts/avrcp/avrcp_pause.py
 Expected result on the tested setup: the target accepted the unauthenticated
 connection and selected PASSTHROUGH commands produced observable behavior,
 including volume changes. Some transport controls may be filtered by the phone,
-the headset, or the current playback state.
+the headset, or the current playback state, so take notes like you are watching
+a state machine through a keyhole.
 
 ### BLE Discovery and Adjacent Checks
 
@@ -220,7 +359,8 @@ as a different trust model from the unauthenticated Classic findings.
 ### ESP32 AVRCP Console
 
 The ESP32 firmware provides an interactive AVRCP test console for owned-device
-reproduction.
+reproduction. Think of it as the pocket-sized hardware path for the same control
+surface tested from Python.
 
 Local development instructions target ESP-IDF v6.1. The current GitHub Actions
 workflow builds firmware with the `espressif/idf:release-v6.0` container, so
@@ -255,6 +395,9 @@ See `firmware/esp32_avrcp_console/README.md` for firmware-specific notes.
 
 ## Evidence and Data
 
+The repo is built around artifacts, not vibes. If a claim matters, it should
+point back to a script, a result file, or a protocol note.
+
 | Area | Files |
 | :--- | :--- |
 | AVRCP frame format and protocol notes | `docs/avrcp-technical-reference.md` |
@@ -265,11 +408,17 @@ See `firmware/esp32_avrcp_console/README.md` for firmware-specific notes.
 | Channel 10 experiments | `data/results_ch10_auth.txt`, `data/results_ch10_fuzz.txt` |
 | ESP32 firmware | `firmware/esp32_avrcp_console/` |
 | Broader attack notes | `ATTACK_VECTORS.md` |
+| Setup and runtime troubleshooting | `TROUBLESHOOTING.md` |
 
 When adding new evidence, include the target device, firmware version, Bluetooth
-adapter, host OS, script revision, and exact device state.
+adapter, host OS, script revision, and exact device state. Good Bluetooth
+research is half packet work and half lab notebook.
 
 ## Compatibility
+
+This project is closest to the metal on Linux with BlueZ. Other platforms may
+work for BLE or high-level checks, but Classic Bluetooth PoC behavior depends on
+the local stack and adapter.
 
 | Component | Tested or expected value |
 | :--- | :--- |
@@ -285,12 +434,16 @@ adapter, host OS, script revision, and exact device state.
 
 ## Repository Map
 
+The layout is intentionally small: scripts for live work, data for receipts,
+docs for protocol notes, and firmware for the ESP32 path.
+
 ```text
 Bluetooth-Jieli-Research/
 |-- README.md                         # Main research entry point
 |-- ATTACK_VECTORS.md                 # Additional experiment notes
 |-- CHANGELOG.md                      # Project history
 |-- CONTRIBUTING.md                   # Contribution guidelines
+|-- TROUBLESHOOTING.md                # Common setup and runtime fixes
 |-- requirements.txt                  # Runtime Python dependencies
 |-- setup.py                          # Python package metadata
 |-- data/                             # Processed experiment outputs
@@ -317,10 +470,11 @@ If you use this repository in research, cite it as:
 
 ## Contributing
 
-Contributions are welcome when they improve reproducibility, documentation, or
-defensive analysis. Open an issue before submitting substantial changes, include
-the tested device and firmware version for new findings, and keep all testing
-within authorized devices.
+Contributions are welcome when they make the signal cleaner: better
+reproduction notes, cleaner captures, defensive analysis, or validation on owned
+hardware. Open an issue before submitting substantial changes, include the
+tested device and firmware version for new findings, and keep all testing within
+authorized devices.
 
 See `CONTRIBUTING.md` for the project contribution guidelines.
 
@@ -335,6 +489,9 @@ This work builds on prior Bluetooth security research, including BlueBorne,
 BrakTooth, and public analysis of vendor-specific Bluetooth control protocols.
 Thanks to the maintainers of BlueZ, PyBluez, Bleak, and ESP-IDF.
 
+Also: respect to the open-source researchers who publish the strange details
+that vendors usually leave in the dark.
+
 ## Contact and Reporting
 
 - GitHub issues: https://github.com/SS-Sauron/Bluetooth-Jieli-Research/issues
@@ -345,4 +502,4 @@ Thanks to the maintainers of BlueZ, PyBluez, Bleak, and ESP-IDF.
 
 - Last updated: May 2026
 - Research status: 🟡 Active, coordinated disclosure in progress
-- Maintenance: Community-driven
+- Maintenance: Community-driven, lab-first, receipts-required
