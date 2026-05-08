@@ -39,14 +39,16 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
-      - name: Install system packages (for pybluez)
+      - name: Install system packages (for Bluetooth)
         run: |
           sudo apt-get update
           sudo apt-get install -y libbluetooth-dev
       - name: Install Python dependencies
         run: |
-          pip install "setuptools<58" wheel
-          pip install --no-build-isolation -r requirements.txt
+          # Create a temporary requirements file with pybluez2 for CI
+          cp requirements.txt requirements-ci.txt
+          sed -i 's/pybluez==0.23/pybluez2>=0.50/' requirements-ci.txt
+          pip install -r requirements-ci.txt
       - name: Verify all imports are installable
         run: |
           IMPORTS=$(grep -rhoP \
@@ -109,6 +111,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build firmware
+        shell: bash
         run: |
           . $IDF_PATH/export.sh
           cd firmware/esp32_avrcp_console
@@ -130,9 +133,16 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
+      - name: Install system packages (for Bluetooth)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libbluetooth-dev
       - name: Install test dependencies
         run: |
-          pip install -r requirements.txt
+          # Create a temporary requirements file with pybluez2 for CI
+          cp requirements.txt requirements-ci.txt
+          sed -i 's/pybluez==0.23/pybluez2>=0.50/' requirements-ci.txt
+          pip install -r requirements-ci.txt
           pip install pytest
       - name: Run pytest
         run: pytest tests/ -v --tb=short || echo "⚠️  No test suite yet"
