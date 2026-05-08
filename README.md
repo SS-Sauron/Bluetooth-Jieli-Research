@@ -8,7 +8,8 @@
 
 ## 🎯 What Is This Repository About?
 
-This is a **systematic security analysis** of Bluetooth audio devices powered by **Jieli chipsets** — a widely deployed family of microcontrollers used in millions of earbuds, headphones, and portable speakers globally.
+This is a **systematic security analysis** of Bluetooth audio devices powered by **Jieli chipsets** - a widely deployed family of microcontrollers used in millions of earbuds, headphones, 
+and portable speakers globally.
 
 ### The Problem We Discovered
 
@@ -18,11 +19,11 @@ Budget Bluetooth audio accessories are everywhere, but the chipsets inside them 
 
 **12 confirmed security vulnerabilities**, including:
 
-1. **Unauthenticated Volume Control** ⚠️ — An attacker within Bluetooth range can remotely change the earbuds' volume without pairing
-2. **Proprietary Debug Protocol (JL_SPP)** — Two hidden RFCOMM channels accept unauthenticated connections
-3. **Weak PRNG** — A predictable random number generator that can be reset to known states (CWE-338)
-4. **Timing Side-Channels** — Response times leak information about device functionality (CWE-208)
-5. **Static Device Identifiers** — Hardware-based "super-cookies" for permanent device tracking (CWE-306)
+1. **Unauthenticated Volume Control** ⚠️ - An attacker within Bluetooth range can remotely change the earbuds' volume without pairing
+2. **Proprietary Debug Protocol (JL_SPP)** - Two hidden RFCOMM channels accept unauthenticated connections
+3. **Weak PRNG** - A predictable random number generator that can be reset to known states (CWE-338)
+4. **Timing Side-Channels** - Response times leak information about device functionality (CWE-208)
+5. **Static Device Identifiers** - Hardware-based "super-cookies" for permanent device tracking (CWE-306)
 
 ### Why This Matters
 
@@ -47,33 +48,34 @@ Budget Bluetooth audio accessories are everywhere, but the chipsets inside them 
 
 ## 📚 Quick Navigation
 
-- **[For Users](#quick-start---why-you-should-care)** — Understand the security risks
-- **[For Researchers](#running-python-scripts-for-poc-testing)** — Reproduce findings with Python scripts
-- **[For Developers](#quick-start--esp32-avrcp-console)** — Build & flash the ESP32 firmware
-- **[For Full Details](#-confirmed-research-findings)** — See all 12 findings with evidence
+- **[For Users](#quick-start---why-you-should-care)** - Understand the security risks
+- **[For Researchers](#running-python-scripts-for-poc-testing)** - Reproduce findings with Python scripts
+- **[For Developers](#quick-start--esp32-avrcp-console)** - Build & flash the ESP32 firmware
+- **[For Full Details](#-confirmed-research-findings)** - See all 12 findings with evidence
 
 ---
 
 ## 📋 Table of Contents
 
-- [Quick Start — Why You Should Care](#quick-start---why-you-should-care)
+- [Quick Start - Why You Should Care](#quick-start---why-you-should-care)
 - [Running Python Scripts for PoC Testing](#running-python-scripts-for-poc-testing)
 - [Environment Setup & Installation](#-environment-setup--installation)
 - [Confirmed Research Findings](#-confirmed-research-findings)
 - [The 8-Byte PASSTHROUGH Frame](#-the-8byte-passthrough-frame)
 - [Attack Matrix](#️-attack-matrix)
-- [Quick Start — ESP32 AVRCP Console](#-quick-start--esp32-avrcp-console)
+- [Quick Start - ESP32 AVRCP Console](#-quick-start--esp32-avrcp-console)
 - [Repository Structure](#-repository-structure)
 - [Disclaimer](#️-disclaimer)
 - [Citation](#-citation)
 
 ---
 
-## ⚡ Quick Start — Why You Should Care
+## 🧠 Understanding the Risk
 
 ### Scenario: Priya on Her Commute
 
-Imagine you're listening to podcasts on your Soundcore earbuds during your morning commute. Your phone is paired—you trust that only your phone can control them. **But what if that assumption is wrong?**
+Imagine you're listening to podcasts on your Soundcore earbuds during your morning commute. Your phone is paired-you trust that only your phone can control them. 
+**But what if that assumption is wrong?**
 
 An attacker (who doesn't even need special equipment) notices your earbuds are nearby. They:
 1. ✅ Query your earbuds without pairing → Receive a unique, permanent device ID
@@ -209,18 +211,18 @@ bluetoothctl devices
 
 | # | Finding | CWE | Impact | Evidence |
 |---|---------|-----|--------|----------|
-| 1 | **Unauthenticated AVRCP Connection** — An unpaired device can open an L2CAP connection to the earbuds on PSM 23 and receive `ACCEPTED` responses for AVRCP commands without any authentication | CWE-306 | **High** | `scripts/avrcp/avrcp_pause.py` |
-| 2 | **Split-Trust Boundary — Volume vs. Transport** — Volume Up/Down commands injected from an unauthenticated source are executed by the earbuds' DSP and update the phone's volume slider | CWE-306 | **High** | Observed via phone + earbud |
-| 3 | **Device Self-Terminates After Unit Info Request** — Sending a `UNIT INFO` request causes the earbuds to immediately close the L2CAP connection | CWE-306 | **Medium** | L2CAP protocol analysis |
-| 4 | **Proprietary JL-SPP Service Exposed Without Authentication** — RFCOMM channels 1 and 10 accept connections without pairing. Channel 1 responds to a 4-byte command `00 00 00 XX` | CWE-306 | **Critical** | `scripts/jl_spp/jl_spp_opcode_scan.py` |
-| 5 | **Full Opcode-to-Response Mapping on JL-SPP Channel 1** — All 256 opcodes (0x00–0xFF) were tested and return unique 17-byte responses | — | **Medium** | `data/results_opcode_full.txt` |
-| 6 | **Timing Side-Channel on JL-SPP Opcodes** — Response latencies cluster into three groups: fast (~9 ms), medium (~100 ms), and slow (~300–400 ms) | CWE-208 | **Medium** | `scripts/jl_spp/jl_timing_analysis.py` |
-| 7 | **Weak PRNG with Predictable Reset** — The 16-byte payload on channel 1 is generated by a non-cryptographic PRNG. Opcode `0x47` forces the PRNG into a known state | CWE-338 | **Critical** | `scripts/jl_spp/jl_prng_period.py` |
-| 8 | **Session-Dynamic Values (No Static Identifiers)** — Repeated runs returned different values for most opcodes. Some opcodes leak static device IDs | CWE-200 | **High** | `scripts/jl_spp/jl_response_analyzer.py` |
-| 9 | **ESP32 Interactive AVRCP Console** — A full ESP-IDF firmware implements the L2CAP→AVRCP injection chain with a scalable command table | — | **N/A** | `firmware/esp32_avrcp_console/` |
-| 10 | **MAC Spoofing Blocked at Baseband Layer** — Impersonating the paired phone's BD_ADDR fails when the phone is actively connected | CWE-295 | **Medium** | Observed during testing |
-| 11 | **BLE HID Media-Key Injection** — An ESP32 paired as a Bluetooth keyboard can inject Play/Pause, Volume, Next, and Previous commands via standard HID Consumer Page | CWE-287 | **High** | `scripts/ble/` directory |
-| 12 | **AVRCP PASSTHROUGH is Exactly 8 Bytes** — Extensive empirical testing confirms that the AVRCP PASSTHROUGH command is an 8-byte AV/C frame over AVCTP | — | **Low** | `docs/avrcp-technical-reference.md` |
+| 1 | **Unauthenticated AVRCP Connection** - An unpaired device can open an L2CAP connection to the earbuds on PSM 23 and receive `ACCEPTED` responses for AVRCP commands without any authentication | CWE-306 | **High** | `scripts/avrcp/avrcp_pause.py` |
+| 2 | **Split-Trust Boundary - Volume vs. Transport** - Volume Up/Down commands injected from an unauthenticated source are executed by the earbuds' DSP and update the phone's volume slider | CWE-306 | **High** | Observed via phone + earbud |
+| 3 | **Device Self-Terminates After Unit Info Request** - Sending a `UNIT INFO` request causes the earbuds to immediately close the L2CAP connection | CWE-306 | **Medium** | L2CAP protocol analysis |
+| 4 | **Proprietary JL-SPP Service Exposed Without Authentication** - RFCOMM channels 1 and 10 accept connections without pairing. Channel 1 responds to a 4-byte command `00 00 00 XX` | CWE-306 | **Critical** | `scripts/jl_spp/jl_spp_opcode_scan.py` |
+| 5 | **Full Opcode-to-Response Mapping on JL-SPP Channel 1** - All 256 opcodes (0x00–0xFF) were tested and return unique 17-byte responses | - | **Medium** | `data/results_opcode_full.txt` |
+| 6 | **Timing Side-Channel on JL-SPP Opcodes** - Response latencies cluster into three groups: fast (~9 ms), medium (~100 ms), and slow (~300–400 ms) | CWE-208 | **Medium** | `scripts/jl_spp/jl_timing_analysis.py` |
+| 7 | **Weak PRNG with Predictable Reset** - The 16-byte payload on channel 1 is generated by a non-cryptographic PRNG. Opcode `0x47` forces the PRNG into a known state | CWE-338 | **Critical** | `scripts/jl_spp/jl_prng_period.py` |
+| 8 | **Session-Dynamic Values (No Static Identifiers)** - Repeated runs returned different values for most opcodes. Some opcodes leak static device IDs | CWE-200 | **High** | `scripts/jl_spp/jl_response_analyzer.py` |
+| 9 | **ESP32 Interactive AVRCP Console** - A full ESP-IDF firmware implements the L2CAP→AVRCP injection chain with a scalable command table | - | **N/A** | `firmware/esp32_avrcp_console/` |
+| 10 | **MAC Spoofing Blocked at Baseband Layer** - Impersonating the paired phone's BD_ADDR fails when the phone is actively connected | CWE-295 | **Medium** | Observed during testing |
+| 11 | **BLE HID Media-Key Injection** - An ESP32 paired as a Bluetooth keyboard can inject Play/Pause, Volume, Next, and Previous commands via standard HID Consumer Page | CWE-287 | **High** | `scripts/ble/` directory |
+| 12 | **AVRCP PASSTHROUGH is Exactly 8 Bytes** - Extensive empirical testing confirms that the AVRCP PASSTHROUGH command is an 8-byte AV/C frame over AVCTP | - | **Low** | `docs/avrcp-technical-reference.md` |
 
 ---
 
@@ -259,7 +261,7 @@ Full field-by-field breakdown in `docs/avrcp-technical-reference.md`.
 
 ---
 
-## 🚀 Quick Start — ESP32 AVRCP Console
+## 🚀 Quick Start - ESP32 AVRCP Console
 
 The ESP32 firmware implements a live, interactive console for testing AVRCP injection:
 
@@ -350,7 +352,7 @@ Bluetooth-Jieli-Research/
 ├── tools/                             # Build artifacts
 │
 ├── Root Configuration Files:
-│   ├── README.md                       # ✅ This file — main entry point
+│   ├── README.md                       # ✅ This file - main entry point
 │   ├── setup.py                        # ✅ Python package configuration
 │   ├── requirements.txt                # ✅ Runtime dependencies (pybluez)
 │   ├── Makefile                        # ✅ Build automation (make install, make lint, etc.)
@@ -407,7 +409,7 @@ Contributions are welcome! To contribute:
 2. **Follow the existing code style** (Python: PEP8, C: ESP-IDF conventions)
 3. **Include clear commit messages** and documentation
 4. **Update README** if adding new features or scripts
-5. **Respect the ethical use guidelines** — security research only
+5. **Respect the ethical use guidelines** - security research only
 
 See `CONTRIBUTING.md` for detailed guidelines.
 
