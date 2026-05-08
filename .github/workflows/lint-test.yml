@@ -103,9 +103,9 @@ jobs:
           fi
 
   firmware-build:
-    name: ESP32 Firmware Build (ESP‑IDF v6.1)
+    name: ESP32 Firmware Build (ESP‑IDF v6.0)
     runs-on: ubuntu-latest
-    container: espressif/idf:release-v6.1
+    container: espressif/idf:release-v6.0
     steps:
       - uses: actions/checkout@v4
       - name: Build firmware
