@@ -501,8 +501,7 @@ See `CONTRIBUTING.md` for the project contribution guidelines.
 
 ## License
 
-Project metadata declares the license as MIT. Add a repository-level license
-file before publishing a formal release or advisory.
+MIT — see the [LICENSE](./LICENSE) file for full terms.
 
 ---
 
@@ -524,7 +523,7 @@ that vendors usually leave in the dark.
   practices and avoid publishing third-party device identifiers.
 - Research inquiries: open an issue with device model, firmware version, host
   environment, and the specific script or evidence file involved.
-
+---
 - Last updated: May 2026
 - Research status: 🟡 Active, coordinated disclosure in progress
 - Maintenance: Community-driven, lab-first, receipts-required
