@@ -361,7 +361,7 @@ Bluetooth-Jieli-Research/
 
 ---
 
-## ⚠�� Disclaimer
+## ⚠️ Disclaimer
 
 **This repository is intended solely for security research and educational purposes.**
 
