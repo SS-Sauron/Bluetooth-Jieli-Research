@@ -101,17 +101,35 @@ pip install -e ".[dev]"
 
 # 2. (Firmware only) Install ESP‑IDF v6.1
 git clone --branch v6.1 https://github.com/espressif/esp-idf.git ~/esp-idf
-cd ~/esp-idf && ./install.sh && source ./export.sh
+cd ~/esp-idf
+./install.sh 
+source ./export.sh
 cd -
 
 # 3. Run your first scan
 python scripts/jl_spp/channel_scanner
 
 # 4. Build & flash the ESP32 (optional)
-cd firmware/esp32_avrcp_console && idf.py build && idf.py flash monitor
+cd firmware/esp32_avrcp_console 
+idf.py build
+idf.py flash monitor
 ```
 
 ---
+## 🔬 Tested Hardware & Environment
+
+| Component | Details |
+|-----------|---------|
+| **Target Device** | Soundcore R50i NC (Jieli chipset) |
+| **Firmware Version** | v01.65 (example) |
+| **Bluetooth Stack** | BlueZ 5.x (Linux), IOBluetooth (macOS) |
+| **Tested USB Adapters** | CSR8510 A10, Broadcom BCM20702A0 (any generic B4.0+ dongle) |
+| **Python Version** | 3.8 – 3.11 |
+| **Operating Systems** | Ubuntu 22.04, macOS Ventura, Windows 10 (WSL2) |
+| **ESP‑IDF Version** | v6.0 (CI builds with this version) |
+
+---
+
 ## 🔬 Running Python Scripts for PoC Testing
 
 ### Installation (One-Command Setup)
