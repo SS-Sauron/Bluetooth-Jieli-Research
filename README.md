@@ -94,6 +94,15 @@ An attacker (who doesn't even need special equipment) notices your earbuds are n
 # Prerequisites (Linux)
 sudo apt update && sudo apt install libbluetooth-dev
 
+> **ℹ️ About Bluetooth support:**  
+> This project uses `pybluez` for Classic Bluetooth operations.  
+> If `pip install pybluez` fails on your system (e.g., Python 3.12+),  
+> use the drop‑in replacement **pybluez2** instead:  
+> ```bash
+> pip install pybluez2
+> ```
+> All scripts work identically with either library.
+
 # 1. Clone and install Python dependencies
 git clone https://github.com/SS-Sauron/Bluetooth-Jieli-Research.git
 cd Bluetooth-Jieli-Research
