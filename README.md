@@ -8,7 +8,7 @@
 Security research on unauthenticated Bluetooth Classic behavior observed on a
 Soundcore R50i NC headset using a Jieli chipset and firmware v01.65.
 
-## 📌 Status
+## Status
 
 | Field | Value |
 | :--- | :--- |
@@ -20,7 +20,7 @@ Soundcore R50i NC headset using a Jieli chipset and firmware v01.65.
 | Disclosure | Coordinated disclosure in progress |
 | Claim boundary | Confirmed findings apply to the tested target and firmware only |
 
-## ⚠️ Responsible Use and Disclosure
+## Responsible Use and Disclosure
 
 This repository is for authorized security research on devices you own or have
 explicit permission to test. The proof-of-concept scripts can transmit Bluetooth
@@ -32,22 +32,22 @@ README are intentionally limited to observations reproduced on the tested
 Soundcore R50i NC firmware version. Similar Jieli-based devices are useful
 future validation targets, but they are not claimed as affected unless tested.
 
-## 📚 Table of Contents
+## Table of Contents
 
-- [Executive Summary](#executive-summary)
-- [Research Scope](#research-scope)
-- [Finding Taxonomy](#finding-taxonomy)
-- [Confirmed Security Findings](#confirmed-security-findings)
-- [Research Observations](#research-observations)
-- [Proof-of-Concept Reproduction](#proof-of-concept-reproduction)
-- [Evidence and Data](#evidence-and-data)
-- [Compatibility](#compatibility)
-- [Repository Map](#repository-map)
-- [Citation](#citation)
-- [Contributing](#contributing)
-- [Contact and Reporting](#contact-and-reporting)
+- [🎯 Executive Summary](#executive-summary)
+- [🔬 Research Scope](#research-scope)
+- [🧭 Finding Taxonomy](#finding-taxonomy)
+- [🛡️ Confirmed Security Findings](#confirmed-security-findings)
+- [🔎 Research Observations](#research-observations)
+- [⚙️ Proof-of-Concept Reproduction](#proof-of-concept-reproduction)
+- [📁 Evidence and Data](#evidence-and-data)
+- [🧪 Compatibility](#compatibility)
+- [🗂️ Repository Map](#repository-map)
+- [📖 Citation](#citation)
+- [🤝 Contributing](#contributing)
+- [📬 Contact and Reporting](#contact-and-reporting)
 
-## 🎯 Executive Summary
+## Executive Summary
 
 This project evaluates Bluetooth protocol exposure on the Soundcore R50i NC
 running firmware v01.65. Testing found that the device accepts selected
@@ -62,7 +62,7 @@ operator-focused so another researcher can reproduce the tests on owned
 hardware, but the security claims remain scoped to the single tested device and
 firmware.
 
-## 🔬 Research Scope
+## Research Scope
 
 | Item | In scope |
 | :--- | :--- |
@@ -78,7 +78,7 @@ products. It is evidence that the tested device exposes security-sensitive
 interfaces without the authentication expected by a user who has paired the
 headset only with their own phone.
 
-## 🧭 Finding Taxonomy
+## Finding Taxonomy
 
 The project separates security findings from supporting observations:
 
@@ -90,7 +90,7 @@ The project separates security findings from supporting observations:
   details used to reproduce the research.
 - Negative results: experiments that did not produce the attempted bypass.
 
-## 🛡️ Confirmed Security Findings
+## Confirmed Security Findings
 
 | ID | Finding | Protocol | Preconditions | Impact | Evidence | CWE |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -101,7 +101,7 @@ The project separates security findings from supporting observations:
 | F-05 | JL-SPP response timing varies by opcode class | Classic RFCOMM/JL-SPP | Successful channel 1 connection; repeated opcode probes | Response latency clusters can reveal protocol state or handler differences without authentication | `scripts/jl_spp/jl_timing_analysis.py`, `scripts/jl_spp/jl_full_timing_scan.py` | CWE-208 |
 | F-06 | JL-SPP response stream shows weak pseudo-random behavior and reset patterns | Classic RFCOMM/JL-SPP | Successful channel 1 connection; repeated probes | Generated values showed repeatable structure and reset behavior during testing, reducing confidence that the channel uses cryptographic randomness | `scripts/jl_spp/jl_prng_period.py`, `scripts/jl_spp/jl_reset_pattern.py`, `data/results_reset.txt` | CWE-338 |
 
-## 🔎 Research Observations
+## Research Observations
 
 | ID | Observation | Category | Evidence | Notes |
 | :--- | :--- | :--- | :--- | :--- |
@@ -111,13 +111,13 @@ The project separates security findings from supporting observations:
 | O-04 | MAC spoofing attempts against an actively connected phone did not bypass baseband behavior | Negative result | `ATTACK_VECTORS.md`, `firmware/esp32_avrcp_console/` | Included to document a tested path that did not produce the intended bypass |
 | O-05 | BLE HID media-key control requires pairing/user acceptance | Adjacent BLE behavior | `scripts/ble/ble_media_keys.py`, `data/results_hid.txt` | Not an unauthenticated finding; kept as context for media-control trust boundaries |
 
-## ⚙️ Proof-of-Concept Reproduction
+## Proof-of-Concept Reproduction
 
 Run the following only against devices you own or are authorized to test. The
 default scripts include addresses from the test device used in this research;
 edit the target constants before reproducing on your own hardware.
 
-### 🐍 Python Environment
+### Python Environment
 
 Use Python 3.8 through 3.11 for the default dependency path. `pybluez==0.23` is
 pinned in `requirements.txt` and exposes the `bluetooth` Python module used by
@@ -147,7 +147,7 @@ python -c "import bluetooth; print('bluetooth module OK')"
 python -c "import bleak; print('bleak OK')"
 ```
 
-### 📡 Classic Bluetooth Prerequisites
+### Classic Bluetooth Prerequisites
 
 On Linux, install BlueZ development headers before installing the Python
 dependencies:
@@ -168,7 +168,7 @@ Some raw Bluetooth operations may require elevated privileges or local adapter
 configuration. Record the adapter model, BlueZ version, target firmware, and
 target state when collecting reproducibility data.
 
-### 🔌 JL-SPP Channel Discovery
+### JL-SPP Channel Discovery
 
 The channel scanner tests RFCOMM channels 1 through 15 and reports whether the
 target accepts a connection.
@@ -190,7 +190,7 @@ python scripts/jl_spp/jl_prng_period.py
 Expected artifacts: console output comparable to `data/results_opcode_scan.txt`,
 `data/results_opcode_full.txt`, and `data/results_reset.txt`.
 
-### 🎚️ AVRCP Control Testing
+### AVRCP Control Testing
 
 The AVRCP script opens L2CAP PSM 23 and sends a media-control test sequence.
 Observe the phone and headset state while the script runs.
@@ -204,7 +204,7 @@ connection and selected PASSTHROUGH commands produced observable behavior,
 including volume changes. Some transport controls may be filtered by the phone,
 the headset, or the current playback state.
 
-### 📶 BLE Discovery and Adjacent Checks
+### BLE Discovery and Adjacent Checks
 
 BLE scripts are included for discovery and adjacent media-control experiments.
 They are not the primary unauthenticated Classic Bluetooth findings.
@@ -217,7 +217,7 @@ python scripts/ble/ble_read_classic_mac.py
 BLE HID media-key tests require pairing or user approval and should be treated
 as a different trust model from the unauthenticated Classic findings.
 
-### 🧩 ESP32 AVRCP Console
+### ESP32 AVRCP Console
 
 The ESP32 firmware provides an interactive AVRCP test console for owned-device
 reproduction.
@@ -253,7 +253,7 @@ avrcp> help
 
 See `firmware/esp32_avrcp_console/README.md` for firmware-specific notes.
 
-## 📁 Evidence and Data
+## Evidence and Data
 
 | Area | Files |
 | :--- | :--- |
@@ -269,7 +269,7 @@ See `firmware/esp32_avrcp_console/README.md` for firmware-specific notes.
 When adding new evidence, include the target device, firmware version, Bluetooth
 adapter, host OS, script revision, and exact device state.
 
-## 🧪 Compatibility
+## Compatibility
 
 | Component | Tested or expected value |
 | :--- | :--- |
@@ -283,7 +283,7 @@ adapter, host OS, script revision, and exact device state.
 | BLE Python library | `bleak>=0.21.0` |
 | ESP-IDF | v6.1 for local setup; v6.0 in current CI firmware build |
 
-## 🗂️ Repository Map
+## Repository Map
 
 ```text
 Bluetooth-Jieli-Research/
@@ -301,7 +301,7 @@ Bluetooth-Jieli-Research/
 `-- tools/                            # Tooling notes
 ```
 
-## 📖 Citation
+## Citation
 
 If you use this repository in research, cite it as:
 
@@ -315,7 +315,7 @@ If you use this repository in research, cite it as:
 }
 ```
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome when they improve reproducibility, documentation, or
 defensive analysis. Open an issue before submitting substantial changes, include
@@ -324,18 +324,18 @@ within authorized devices.
 
 See `CONTRIBUTING.md` for the project contribution guidelines.
 
-## 📄 License
+## License
 
 Project metadata declares the license as MIT. Add a repository-level license
 file before publishing a formal release or advisory.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 This work builds on prior Bluetooth security research, including BlueBorne,
 BrakTooth, and public analysis of vendor-specific Bluetooth control protocols.
 Thanks to the maintainers of BlueZ, PyBluez, Bleak, and ESP-IDF.
 
-## 📬 Contact and Reporting
+## Contact and Reporting
 
 - GitHub issues: https://github.com/SS-Sauron/Bluetooth-Jieli-Research/issues
 - Security or disclosure questions: use coordinated vulnerability disclosure
