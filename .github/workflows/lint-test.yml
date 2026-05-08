@@ -105,7 +105,7 @@ jobs:
   firmware-build:
     name: ESP32 Firmware Build (ESP‑IDF v6.1)
     runs-on: ubuntu-latest
-    container: espressif/idf:release-v6.1
+    container: espressif/idf:v6.1-dev
     steps:
       - uses: actions/checkout@v4
       - name: Build firmware
