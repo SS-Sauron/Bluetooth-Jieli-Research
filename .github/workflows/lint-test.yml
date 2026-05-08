@@ -47,7 +47,7 @@ jobs:
         run: |
           # Create a temporary requirements file with pybluez2 for CI
           cp requirements.txt requirements-ci.txt
-          sed -i 's/pybluez==0.23/pybluez2>=0.50/' requirements-ci.txt
+          sed -i 's/pybluez==0.23/pybluez2>=0.45/' requirements-ci.txt
           pip install -r requirements-ci.txt
       - name: Verify all imports are installable
         run: |
@@ -141,7 +141,7 @@ jobs:
         run: |
           # Create a temporary requirements file with pybluez2 for CI
           cp requirements.txt requirements-ci.txt
-          sed -i 's/pybluez==0.23/pybluez2>=0.50/' requirements-ci.txt
+          sed -i 's/pybluez==0.23/pybluez2>=0.45/' requirements-ci.txt
           pip install -r requirements-ci.txt
           pip install pytest
       - name: Run pytest
