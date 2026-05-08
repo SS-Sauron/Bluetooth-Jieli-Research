@@ -74,7 +74,8 @@ Budget Bluetooth audio accessories are everywhere, but the chipsets inside them 
 
 ### Scenario: Priya on Her Commute
 
-Imagine you're listening to podcasts on your Soundcore earbuds during your morning commute. Your phone is paired-you trust that only your phone can control them. 
+Imagine you're listening to podcasts on your Soundcore earbuds during your morning commute. 
+Your phone is paired-you trust that only your phone can control them. 
 **But what if that assumption is wrong?**
 
 An attacker (who doesn't even need special equipment) notices your earbuds are nearby. They:
@@ -89,23 +90,23 @@ An attacker (who doesn't even need special equipment) notices your earbuds are n
 
 ## ⚡ Quick Start (5‑minute setup)
 ```bash
-### Prerequisites (Linux)
+# Prerequisites (Linux)
 sudo apt update && sudo apt install libbluetooth-dev
 
-### 1. Clone and install Python dependencies
+# 1. Clone and install Python dependencies
 git clone https://github.com/SS-Sauron/Bluetooth-Jieli-Research.git
 cd Bluetooth-Jieli-Research
 pip install -e ".[dev]"
 
-### 2. (Firmware only) Install ESP‑IDF v6.1
+# 2. (Firmware only) Install ESP‑IDF v6.1
 git clone --branch v6.1 https://github.com/espressif/esp-idf.git ~/esp-idf
 cd ~/esp-idf && ./install.sh && source ./export.sh
 cd -
 
-### 3. Run your first scan
+# 3. Run your first scan
 python scripts/jl_spp/channel_scanner
 
-### 4. Build & flash the ESP32 (optional)
+# 4. Build & flash the ESP32 (optional)
 cd firmware/esp32_avrcp_console && idf.py build && idf.py flash monitor
 ```
 
@@ -146,7 +147,8 @@ python3 scripts/ble/ble_enum.py
 python3 scripts/jl_spp/jl_prng_period.py
 ```
 
-**Note:** All scripts target Soundcore R50i NC (MAC: `F4:B6:2D:AE:AB:E0`). Edit the `TARGET` variable to test other Jieli devices.
+**Note:** All scripts target Soundcore R50i NC (MAC: `F4:B6:2D:AE:AB:E0`). 
+Edit the `TARGET` variable to test other Jieli devices.
 
 ---
 
