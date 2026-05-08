@@ -88,7 +88,7 @@ An attacker (who doesn't even need special equipment) notices your earbuds are n
 ---
 
 ## ⚡ Quick Start (5‑minute setup)
-
+```bash
 ### Prerequisites (Linux)
 sudo apt update && sudo apt install libbluetooth-dev
 
@@ -107,6 +107,7 @@ python scripts/jl_spp/channel_scanner
 
 ### 4. Build & flash the ESP32 (optional)
 cd firmware/esp32_avrcp_console && idf.py build && idf.py flash monitor
+```
 
 ---
 ## 🔬 Running Python Scripts for PoC Testing
