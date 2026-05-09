@@ -1,42 +1,39 @@
-```markdown
 # ESP32 AVRCP Interactive Console
 
 ESP‑IDF project implementing a modular, interactive console for injecting
 AVRCP Volume Up/Down commands into Jieli‑based Bluetooth earbuds (target:
-Soundcore R50i NC).  Supports graceful connection management (`connect`,
-`disconnect`), an abortable command queue, and a three‑command mental model:
-`exit` (Ctrl+C), `reboot` (Ctrl+\), `disconnect` (hang‑up).
+Soundcore R50i NC). The firmware now uses a Bruce-like WASD menu over serial
+instead of typed shell commands.
 
 ## Build & Flash
 
-```bash
-cd firmware/esp32_avrcp_console
-idf.py set-target esp32
-idf.py menuconfig   # enable Classic BT + BT L2CAP if needed
-idf.py build
-idf.py -p /dev/ttyUSB0 flash monitor
-```
+Use the repository [ESP32 firmware installation guide](../../docs/installation.md)
+for the VS Code and ESP-IDF extension workflow. The guide covers installing
+ESP-IDF, opening this firmware project, building, flashing, and monitoring the
+console.
 
-## Commands
+## Menu Controls
 
-| Command | Description |
-|---------|-------------|
-| `connect [MAC]` | Establish L2CAP/ACL link (default target used if no MAC) |
-| `up [N]`        | Volume Up, N presses (default 15, 0 = do nothing) |
-| `down [N]`      | Volume Down, N presses (default 15, 0 = do nothing) |
-| `exit`          | Abort current batch (like Ctrl+C) |
-| `disconnect`    | Gracefully tear down ACL link |
-| `reboot`        | Force disconnect and restart ESP32 (like Ctrl+\) |
-| `help`          | Show this list |
+The serial interface is menu-driven. Use the keyboard to move through the main
+menu and select AVRCP, JL-SPP, Status, or Reboot actions.
 
-## Three‑Command Mental Model
-
-* `exit` – interrupts the current operation, but keeps the connection alive (Ctrl+C)
-* `reboot` – forcefully terminates the firmware and restarts the chip (Ctrl+\)
-* `disconnect` – cleanly closes the Bluetooth connection without rebooting (hang‑up)
-```
+| Key | Action |
+| :--- | :--- |
+| `W` | Move up |
+| `S` | Move down |
+| `A` | Go back |
+| `D` or `Enter` | Select the highlighted item |
+| `1`-`9` | Pick a numbered menu item directly |
+| `Q` or `R` | Reboot the ESP32 |
 
 ## Hardware Requirements
 - ESP32‑WROOM‑32D development board (or any original ESP32)
 - USB data cable
 - Soundcore R50i NC earbuds (or any Jieli‑based Bluetooth audio device)
+
+## Platform Setup
+
+See the repository [ESP32 firmware installation guide](../../docs/installation.md)
+for Windows, Linux, and Android USB-OTG console notes. The Python PC/laptop
+Bluetooth-adapter path is documented separately in
+[PC/Laptop Bluetooth Adapter Setup](../../docs/pc-laptop-bluetooth-setup.md).

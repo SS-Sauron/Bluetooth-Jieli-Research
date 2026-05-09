@@ -80,6 +80,7 @@ product.
 - [🧭 Finding Taxonomy](#finding-taxonomy)
 - [🚨 Confirmed Security Findings](#confirmed-security-findings)
 - [🔎 Research Observations](#research-observations)
+- [🛠️ Installation](#installation)
 - [⚡ Proof-of-Concept Reproduction](#proof-of-concept-reproduction)
 - [📁 Evidence and Data](#evidence-and-data)
 - [🧪 Compatibility](#compatibility)
@@ -244,6 +245,30 @@ The 8‑byte AVCTP frame used for PASSTHROUGH commands (values are an example):
 
 ---
 
+## Installation
+
+The main installation path is for the ESP32 AVRCP console firmware. It uses
+Visual Studio Code and the Espressif ESP-IDF extension so Windows and Linux
+users follow the same setup flow. See the full
+[ESP32 firmware installation guide](docs/installation.md) for the complete
+Windows/Linux walkthrough.
+
+Linux quick path:
+
+1. Install Visual Studio Code.
+2. Install the official Espressif ESP-IDF extension.
+3. Press `F1` and run `ESP-IDF: Configure ESP-IDF Extension`.
+4. Use the wizard to install ESP-IDF.
+5. Clone this repository and open `firmware/esp32_avrcp_console` in VS Code.
+6. Set the target to `esp32`, then build, flash, and monitor from the ESP-IDF
+   extension.
+
+If you do not have an ESP32 and want to run the Python PoCs from a PC or laptop
+with a USB Bluetooth adapter, use the separate
+[PC/laptop Bluetooth adapter setup](docs/pc-laptop-bluetooth-setup.md).
+
+---
+
 ## Proof-of-Concept Reproduction
 
 > ⚡ **Operator note:** run the following only against devices you own or are
@@ -257,61 +282,13 @@ The 8‑byte AVCTP frame used for PASSTHROUGH commands (values are an example):
 > - Run probes more than once; Bluetooth state machines can be moody.
 > - Stop if the device is not yours, not in your lab, or not explicitly in scope.
 
-### Python Environment
-
-Use Python 3.8 through 3.11 for the default dependency path. `pybluez==0.23` is
-pinned in `requirements.txt` and exposes the `bluetooth` Python module used by
-the Classic Bluetooth scripts.
-
-```bash
-git clone https://github.com/SS-Sauron/Bluetooth-Jieli-Research.git
-cd Bluetooth-Jieli-Research
-
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
-```
-
-If `pybluez` fails to build on your platform, use `pybluez2` as a drop-in
-provider for the same `bluetooth` module:
-
-```bash
-python -m pip install pybluez2 "bleak>=0.21.0"
-```
-
-Verify the imports used by the scripts:
-
-```bash
-python -c "import bluetooth; print('bluetooth module OK')"
-python -c "import bleak; print('bleak OK')"
-```
-
 > 🛠️ **Troubleshooting:** if setup gets noisy, check `TROUBLESHOOTING.md`
 > before changing the scripts.
 
-### Classic Bluetooth Prerequisites
-
-On Linux, install BlueZ development headers before installing the Python
-dependencies:
-
-```bash
-sudo apt update
-sudo apt install -y bluetooth bluez libbluetooth-dev
-```
-
-Confirm the local adapter is present and powered:
-
-```bash
-bluetoothctl show
-bluetoothctl devices
-```
-
-Some raw Bluetooth operations may require elevated privileges or local adapter
-configuration. Record the adapter model, BlueZ version, target firmware, and
-target state when collecting reproducibility data.
-
 ### JL-SPP Channel Discovery
+
+Use the [PC/laptop Bluetooth adapter setup](docs/pc-laptop-bluetooth-setup.md)
+before running the Python proof-of-concept scripts.
 
 The channel scanner tests RFCOMM channels 1 through 15 and reports whether the
 target accepts a connection.
@@ -363,38 +340,33 @@ as a different trust model from the unauthenticated Classic findings.
 
 ### ESP32 AVRCP Console
 
-The ESP32 firmware provides an interactive AVRCP test console for owned-device
-reproduction. Think of it as the pocket-sized hardware path for the same control
-surface tested from Python.
+The ESP32 firmware provides an interactive, Bruce-like WASD menu over serial for
+owned-device reproduction. Think of it as the pocket-sized hardware path for the
+same control surface tested from Python, with menu-driven AVRCP and JL-SPP
+actions instead of typed shell commands.
 
-Local development instructions target ESP-IDF v6.1. The current GitHub Actions
-workflow builds firmware with the `espressif/idf:release-v6.0` container, so
-both versions are represented in the project.
+Build and flash it with the
+[ESP32 firmware installation guide](docs/installation.md).
 
-```bash
-git clone --branch v6.1 https://github.com/espressif/esp-idf.git ~/esp-idf
-cd ~/esp-idf
-./install.sh
-source ./export.sh
+| Key | Action |
+| :--- | :--- |
+| `W` | Move up |
+| `S` | Move down |
+| `A` | Go back |
+| `D` or `Enter` | Select the highlighted item |
+| `1`-`9` | Pick a numbered menu item directly |
+| `Q` or `R` | Reboot the ESP32 |
 
-cd /path/to/Bluetooth-Jieli-Research/firmware/esp32_avrcp_console
-idf.py set-target esp32
-idf.py menuconfig
-idf.py build
-idf.py -p /dev/ttyUSB0 flash monitor
-```
+The main menu offers **AVRCP**, **JL-SPP**, **Status**, and **Reboot** entries.
 
-Console commands:
+Quick smoke test after flashing:
 
-```text
-avrcp> connect [MAC]
-avrcp> up 5
-avrcp> down 10
-avrcp> exit
-avrcp> disconnect
-avrcp> reboot
-avrcp> help
-```
+1. Open the serial monitor and confirm the main menu appears.
+2. Press `W` and `S` to move through menu items.
+3. Press `D` or `Enter` on **Status** and confirm the status screen opens.
+4. Press `A` to return to the main menu.
+5. Open **AVRCP** and run only a low-count owned-device test.
+6. Select **Reboot**, or press `Q`/`R`, to confirm reset handling.
 
 See `firmware/esp32_avrcp_console/README.md` for firmware-specific notes.
 

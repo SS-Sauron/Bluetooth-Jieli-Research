@@ -1,27 +1,17 @@
 /*
- * AVRCP Runtime Command Console — Multi‑Target, Abort, Graceful Exit
+ * AVRCP Runtime Command Console — Bruce-style Menu Edition
  * Target: Soundcore R50i NC (default F4:B6:2D:AE:AB:E0)
- * Uses ESP32 real MAC (no spoofing)
  *
- * Available commands (type and press Enter):
- *   connect [MAC]  – Establish an L2CAP/ACL link to earbuds (optional MAC)
- *   up [N]         – Volume Up, N presses (default 15, 0 = do nothing)
- *   down [N]       – Volume Down, N presses (default 15, 0 = do nothing)
- *   exit           – Stop any running volume batch (like Ctrl+C)
- *   disconnect     – Gracefully hang up the ACL link (phone‑style "hang up")
- *   reboot         – Force disconnect and restart ESP32 (like Ctrl+\ or SIGQUIT)
- *   help           – Show this list
+ * This file owns the Bluetooth initialisation and shared state.
+ * All user interaction is handled by menu.c (loop_options pattern).
  *
- * Three‑command mental model (inspired by Linux terminal):
- *   • exit        → interrupts the current operation, but keeps the connection alive
- *                   analogous to pressing Ctrl+C in a terminal (SIGINT)
- *   • reboot      → forcefully terminates the entire firmware and restarts the chip,
- *                   analogous to pressing Ctrl+\ (SIGQUIT) or a system reset
- *   • disconnect  → cleanly closes the Bluetooth connection without rebooting,
- *                   analogous to hanging up a phone call; you can reconnect later
+ * Shared symbols are non-static so menu.c can access them directly.
+ * See menu.h for the extern declarations.
  *
- * The command table (command_t s_commands[]) is extensible:
- * add one line to register a new AVRCP operation.
+ * Three-command model is preserved through menu actions:
+ *   • connect / disconnect — via action_connect / action_disconnect
+ *   • volume up/down       — via action_vol_up / action_vol_down
+ *   • reboot               — via action_reboot
  */
 
 #include <stdio.h>
@@ -42,46 +32,23 @@
 #include "esp_mac.h"
 #include "esp_console.h"
 
+#include "menu.h"   /* ← pulls in extern declarations + menu_run_main() */
+
 #define TAG "AVRCP"
 
-/* ── Default target earbuds (non‑const, required by L2CAP API) ── */
-static esp_bd_addr_t g_target_addr = {
+/* ── Default target earbuds — non-const, required by L2CAP API ──────── */
+esp_bd_addr_t g_target_addr = {
     0xF4, 0xB6, 0x2D, 0xAE, 0xAB, 0xE0};
 
-/* ── Global L2CAP state ───────────────────────────────────
- * g_l2cap_fd == -1  ⇒ no active connection
- * All volume commands are guarded by this condition.
- * ──────────────────────────────────────────────────────── */
-static SemaphoreHandle_t g_l2cap_sem = NULL;
-static SemaphoreHandle_t g_acl_disc_sem = NULL;
-static int g_l2cap_fd = -1;
+/* ── Global L2CAP state ──────────────────────────────────────────────── */
+SemaphoreHandle_t g_l2cap_sem     = NULL;
+SemaphoreHandle_t g_acl_disc_sem  = NULL;
+int               g_l2cap_fd      = -1;
 
-/* ── Runtime command parameters ───────────────────────────
- * Both are set by the command handler and read atomically
- * by the main loop.  s_repeats == 0 ⇒ idle.
- * ──────────────────────────────────────────────────────── */
-static volatile uint8_t g_avrcp_opcode = 0x41; /* 0x41 = Vol Up, 0x42 = Vol Down */
-static volatile int g_repeats = 0;             /* 0 ⇒ wait for command */
-static volatile bool g_abort = false;          /* set by exit handler to cancel batch */
-
-/* ── Command table ────────────────────────────────────────
- * Each entry maps a user string to an AVRCP opcode and
- * default repeat count.  To add a new AVRCP operation,
- * just insert one line into this table.
- * ──────────────────────────────────────────────────────── */
-typedef struct
-{
-    const char *name;
-    uint8_t opcode;
-    int default_reps;
-    const char *description;
-} command_t;
-
-static const command_t s_commands[] = {
-    {"up", 0x41, 15, "Volume Up   [N times] (0 = do nothing)"},
-    {"down", 0x42, 15, "Volume Down [N times] (0 = do nothing)"},
-};
-#define NUM_COMMANDS (sizeof(s_commands) / sizeof(s_commands[0]))
+/* ── Runtime command parameters ─────────────────────────────────────── */
+volatile uint8_t  g_avrcp_opcode  = 0x41;
+volatile int      g_repeats       = 0;
+volatile bool     g_abort         = false;
 
 /* =========================================================
  * read_line — stable line reader (no ANSI escapes)
@@ -89,9 +56,9 @@ static const command_t s_commands[] = {
  * Reads characters one at a time until '\n'.  Supports
  * backspace and ignores carriage return.  Characters are
  * echoed immediately for visibility.
- * Returns true if a non‑empty line was captured.
+ * Returns true if a non-empty line was captured.
  * ========================================================= */
-static bool read_line(char *buf, size_t len)
+bool read_line(char *buf, size_t len)
 {
     memset(buf, 0, len);
     char *p = buf;
@@ -128,12 +95,13 @@ static bool read_line(char *buf, size_t len)
 /* =========================================================
  * send_avrcp_passthrough
  * ---------------------------------------------------------
- * Builds an 8‑byte AVRCP Passthrough frame and writes it
- * to the L2CAP file descriptor.  Returns void; errors are
- * logged via ESP_LOGE.
+ * Builds an 8-byte AVRCP Passthrough frame and writes it
+ * to the L2CAP file descriptor.
+ * op_data: 0x41=Vol Up, 0x42=Vol Down, 0x44=Play, 0x46=Pause
+ * state:   0x00=Press, 0x80=Release
  * ========================================================= */
-static void send_avrcp_passthrough(int fd, uint8_t tl,
-                                   uint8_t op_data, uint8_t state)
+void send_avrcp_passthrough(int fd, uint8_t tl,
+                             uint8_t op_data, uint8_t state)
 {
     uint8_t pkt[8];
     pkt[0] = (tl << 4) & 0xF0;
@@ -159,13 +127,9 @@ static void send_avrcp_passthrough(int fd, uint8_t tl,
 
 /* =========================================================
  * L2CAP event callback
- * ---------------------------------------------------------
- * Handles INIT, VFS_REGISTER, OPEN, and CLOSE events from
- * the L2CAP module.  Signals g_l2cap_sem to unblock the
- * connect sequence.
  * ========================================================= */
 static void l2cap_callback(esp_bt_l2cap_cb_event_t event,
-                           esp_bt_l2cap_cb_param_t *param)
+                            esp_bt_l2cap_cb_param_t *param)
 {
     switch (event)
     {
@@ -183,6 +147,7 @@ static void l2cap_callback(esp_bt_l2cap_cb_event_t event,
         break;
     case ESP_BT_L2CAP_CLOSE_EVT:
         g_l2cap_fd = -1;
+        /* menu.c volume loops guard on g_l2cap_fd so they self-terminate */
         break;
     default:
         break;
@@ -191,13 +156,9 @@ static void l2cap_callback(esp_bt_l2cap_cb_event_t event,
 
 /* =========================================================
  * GAP callback
- * ---------------------------------------------------------
- * Listens for ACL disconnection events.  Used by the
- * disconnect / exit commands to confirm a clean tear‑down
- * before restarting or reconnecting.
  * ========================================================= */
 static void gap_callback(esp_bt_gap_cb_event_t event,
-                         esp_bt_gap_cb_param_t *param)
+                          esp_bt_gap_cb_param_t *param)
 {
     if (event == ESP_BT_GAP_ACL_DISCONN_CMPL_STAT_EVT)
     {
@@ -210,12 +171,10 @@ static void gap_callback(esp_bt_gap_cb_event_t event,
 /* =========================================================
  * do_connect
  * ---------------------------------------------------------
- * Core connection logic shared by the "connect" command.
- * Handles L2CAP init, VFS registration, and outgoing
- * connection to the target MAC.  On failure, cleans up and
- * returns an error string.  On success, g_l2cap_fd is set.
+ * Core connection logic shared with menu.c via menu.h extern.
+ * On success g_l2cap_fd is set to the open file descriptor.
  * ========================================================= */
-static esp_err_t do_connect(esp_bd_addr_t addr, const char **err_str)
+esp_err_t do_connect(esp_bd_addr_t addr, const char **err_str)
 {
     esp_err_t ret;
 
@@ -276,11 +235,10 @@ static esp_err_t do_connect(esp_bd_addr_t addr, const char **err_str)
 /* =========================================================
  * do_disconnect
  * ---------------------------------------------------------
- * Core disconnect logic.  Tears down L2CAP and waits for
- * the ACL link to be fully released.  Callable even when
- * already disconnected (safe no‑op).
+ * Tears down L2CAP and waits for ACL link release.
+ * Safe to call when already disconnected (no-op).
  * ========================================================= */
-static void do_disconnect(void)
+void do_disconnect(void)
 {
     if (g_l2cap_fd < 0)
         return;
@@ -298,151 +256,15 @@ static void do_disconnect(void)
 }
 
 /* =========================================================
- * connect_handler
- * ---------------------------------------------------------
- * Usage:  connect [MAC]
- * Parses an optional MAC address; if none given, uses the
- * default target.  Calls do_connect() and reports the result.
- * ========================================================= */
-static int connect_handler(int argc, char **argv)
-{
-    if (g_l2cap_fd >= 0)
-    {
-        printf("Already connected. Use 'disconnect' first.\n");
-        return 0;
-    }
-
-    esp_bd_addr_t addr;
-    if (argc > 1)
-    {
-        /* parse user-provided MAC */
-        if (sscanf(argv[1], "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
-                   &addr[0], &addr[1], &addr[2],
-                   &addr[3], &addr[4], &addr[5]) != 6)
-        {
-            printf("Invalid MAC format. Use e.g. F4:B6:2D:AE:AB:E0\n");
-            return 0;
-        }
-    }
-    else
-    {
-        memcpy(addr, g_target_addr, sizeof(esp_bd_addr_t));
-    }
-
-    printf("Connecting to %02x:%02x:%02x:%02x:%02x:%02x ...\n",
-           addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
-
-    const char *err_str = NULL;
-    esp_err_t ret = do_connect(addr, &err_str);
-    if (ret == ESP_OK)
-    {
-        printf("Connected successfully.\n");
-    }
-    else
-    {
-        printf("Connection failed: %s (0x%x)\n", err_str, ret);
-    }
-    return 0;
-}
-
-/* =========================================================
- * disconnect_handler
- * ---------------------------------------------------------
- * Usage:  disconnect
- * Calls do_disconnect() and reports the result.
- * ========================================================= */
-static int disconnect_handler(int argc, char **argv)
-{
-    if (g_l2cap_fd < 0)
-    {
-        printf("Not connected.\n");
-        return 0;
-    }
-    do_disconnect();
-    printf("Disconnected. Connection closed (like hanging up a phone).\n");
-    return 0;
-}
-
-/* =========================================================
- * exit_handler
- * ---------------------------------------------------------
- * Usage:  exit
- * Immediately stops any running volume batch.  This is the
- * equivalent of pressing Ctrl+C in a terminal — it interrupts
- * the current command without disconnecting or rebooting.
- * ========================================================= */
-static int exit_handler(int argc, char **argv)
-{
-    g_abort = true;
-    g_repeats = 0;
-    printf("Batch aborted (like Ctrl+C). Connection is still active.\n");
-    return 0;
-}
-
-/* =========================================================
- * reboot_handler
- * ---------------------------------------------------------
- * Usage:  reboot
- * Force‑disconnects (if connected) and restarts the ESP32.
- * This is analogous to pressing Ctrl+\ in a terminal — a
- * non‑negotiable termination that leaves the system clean
- * for the next session.
- * ========================================================= */
-static int reboot_handler(int argc, char **argv)
-{
-    ESP_LOGI(TAG, "Rebooting (like Ctrl+\\)...");
-    do_disconnect();
-    vTaskDelay(pdMS_TO_TICKS(500));
-    esp_restart();
-    return 0;
-}
-
-/* =========================================================
- * volume_handler
- * ---------------------------------------------------------
- * Called when the user types "up [N]" or "down [N]".
- * Sets the global g_avrcp_opcode and g_repeats for the main
- * loop to execute.  Refuses if no L2CAP connection exists.
- * Allows 0 repeats to effectively do nothing.
- * ========================================================= */
-static int volume_handler(int argc, char **argv)
-{
-    if (g_l2cap_fd < 0)
-    {
-        printf("Not connected. Use 'connect' first.\n");
-        return 0;
-    }
-
-    const char *cmd = argv[0];
-    for (int i = 0; i < (int)NUM_COMMANDS; i++)
-    {
-        if (strcmp(cmd, s_commands[i].name) == 0)
-        {
-            g_avrcp_opcode = s_commands[i].opcode;
-            g_repeats = s_commands[i].default_reps;
-            if (argc > 1)
-            {
-                int n = atoi(argv[1]);
-                if (n >= 0)
-                    g_repeats = n; // allow 0 (do nothing)
-            }
-            printf("Queued: %s x%d\n", s_commands[i].description, g_repeats);
-            return 0;
-        }
-    }
-    return 1;
-}
-
-/* =========================================================
  * app_main
  * ---------------------------------------------------------
- * Initialises the platform, registers all console commands,
- * and runs the interactive loop.  No connection is attempted
- * until the user types 'connect'.
+ * Platform init, then hand off to the Bruce-style menu.
+ * No esp_console registration, no while(1) command loop.
+ * Everything the user sees is driven by menu_run_main().
  * ========================================================= */
 void app_main(void)
 {
-    ESP_LOGI(TAG, "=== AVRCP Console ===");
+    ESP_LOGI(TAG, "=== AVRCP Console (menu edition) ===");
 
     /* ── NVS ── */
     esp_err_t ret = nvs_flash_init();
@@ -461,31 +283,18 @@ void app_main(void)
     ESP_ERROR_CHECK(esp_bluedroid_init());
     ESP_ERROR_CHECK(esp_bluedroid_enable());
 
-    /*
-     * Suppress low‑level Bluetooth stack chatter that otherwise spills into
-     * the serial console and interrupts the interactive prompt.  These tags
-     * are not relevant to the AVRCP injection logic:
-     *
-     *  BT_HCI   – Host Controller Interface events (sniff mode, connection
-     *             parameters, power management).  Informational only.
-     *  BT_APPL  – Application‑layer power‑management status (e.g. attempt
-     *             to enter sniff mode).  No impact on data transfer.
-     *  BT_L2CAP – L2CAP channel configuration details (FCR negotiation,
-     *             MTU, etc.).  Already known to be working.
-     *  BT_BTM   – Security Manager access‑request warnings (remote features
-     *             unknown).  Does not prevent the connection.
-     */
-    esp_log_level_set("BT_HCI", ESP_LOG_NONE);
-    esp_log_level_set("BT_APPL", ESP_LOG_NONE);
+    /* Suppress low-level BT stack chatter */
+    esp_log_level_set("BT_HCI",   ESP_LOG_NONE);
+    esp_log_level_set("BT_APPL",  ESP_LOG_NONE);
     esp_log_level_set("BT_L2CAP", ESP_LOG_NONE);
-    esp_log_level_set("BT_BTM", ESP_LOG_NONE);
+    esp_log_level_set("BT_BTM",   ESP_LOG_NONE);
 
     const uint8_t *mac = esp_bt_dev_get_address();
     ESP_LOGI(TAG, "ESP32 BT MAC: %02X:%02X:%02X:%02X:%02X:%02X",
              mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 
     /* ── Semaphores ── */
-    g_l2cap_sem = xSemaphoreCreateBinary();
+    g_l2cap_sem    = xSemaphoreCreateBinary();
     g_acl_disc_sem = xSemaphoreCreateBinary();
     if (g_l2cap_sem == NULL || g_acl_disc_sem == NULL)
     {
@@ -493,111 +302,23 @@ void app_main(void)
         return;
     }
 
-    /* ── Register callbacks ──
-     * Must be done after Bluedroid is enabled and before any connection
-     * attempt, so the callbacks are in place when the commands are used.
-     */
+    /* ── Register callbacks ── */
     ESP_ERROR_CHECK(esp_bt_gap_register_callback(gap_callback));
     ESP_ERROR_CHECK(esp_bt_l2cap_register_callback(l2cap_callback));
 
-    /* ── Console setup ── */
-    esp_console_config_t console_cfg = ESP_CONSOLE_CONFIG_DEFAULT();
-    ESP_ERROR_CHECK(esp_console_init(&console_cfg));
-    ESP_ERROR_CHECK(esp_console_register_help_command());
+    /* ── Console VFS init ───────────────────────────────────────────────
+     * Installs the UART driver and registers it with the VFS layer.
+     * Required so that:
+     *   - uart_read_bytes() (used by getch() in menu.c) has a ring buffer
+     *   - getchar() / printf() (used by read_line() and action fns) work
+     * No command registration is done — we only need the driver init.
+     * ─────────────────────────────────────────────────────────────────── */
+    esp_console_config_t con_cfg = ESP_CONSOLE_CONFIG_DEFAULT();
+    ESP_ERROR_CHECK(esp_console_init(&con_cfg));
 
-    /* Register volume commands */
-    for (int i = 0; i < (int)NUM_COMMANDS; i++)
-    {
-        const esp_console_cmd_t cmd = {
-            .command = s_commands[i].name,
-            .help = s_commands[i].description,
-            .hint = "[N]",
-            .func = &volume_handler,
-        };
-        ESP_ERROR_CHECK(esp_console_cmd_register(&cmd));
-    }
+    ESP_LOGI(TAG, "BT ready. Entering menu...");
+    vTaskDelay(pdMS_TO_TICKS(200)); /* brief pause so log flushes */
 
-    /* Register infrastructure commands with descriptive help */
-    const esp_console_cmd_t connect_cmd = {
-        .command = "connect",
-        .help = "Establish a Bluetooth link to earbuds [MAC] (default target used if no MAC given)",
-        .hint = "[MAC]",
-        .func = &connect_handler};
-    const esp_console_cmd_t disconnect_cmd = {
-        .command = "disconnect",
-        .help = "Gracefully hang up the connection (like ending a phone call); allows reconnecting later",
-        .hint = NULL,
-        .func = &disconnect_handler};
-    const esp_console_cmd_t exit_cmd = {
-        .command = "exit",
-        .help = "Stop the currently running volume batch (like Ctrl+C); does not disconnect or reboot",
-        .hint = NULL,
-        .func = &exit_handler};
-    const esp_console_cmd_t reboot_cmd = {
-        .command = "reboot",
-        .help = "Force disconnect and restart ESP32 (like Ctrl+\\ or SIGQUIT); clean slate before reflashing",
-        .hint = NULL,
-        .func = &reboot_handler};
-    ESP_ERROR_CHECK(esp_console_cmd_register(&connect_cmd));
-    ESP_ERROR_CHECK(esp_console_cmd_register(&disconnect_cmd));
-    ESP_ERROR_CHECK(esp_console_cmd_register(&exit_cmd));
-    ESP_ERROR_CHECK(esp_console_cmd_register(&reboot_cmd));
-
-    ESP_LOGI(TAG, "Ready. Type 'connect' to begin.");
-    ESP_LOGI(TAG, "Commands: connect, up/down, exit, disconnect, reboot, help");
-
-    /* ── Interactive console loop ── */
-    int cmd_ret;
-    char line[64];
-    while (1)
-    {
-        /* Execute pending AVRCP command if connected */
-        if (g_repeats > 0 && g_l2cap_fd >= 0)
-        {
-            int count = g_repeats;
-            uint8_t op = g_avrcp_opcode;
-            g_repeats = 0;
-
-            ESP_LOGI(TAG, "Sending %d %s commands...", count,
-                     (op == 0x41) ? "Volume Up" : "Volume Down");
-
-            static uint8_t tl = 0; // persistent across batches
-            g_abort = false;
-            for (int i = 0; i < count; i++)
-            {
-                /* Check if exit handler set the abort flag — stops the batch immediately */
-                if (g_abort)
-                {
-                    ESP_LOGI(TAG, "Batch aborted by user.");
-                    break;
-                }
-                send_avrcp_passthrough(g_l2cap_fd, tl, op, 0x00);
-                vTaskDelay(pdMS_TO_TICKS(200));
-                send_avrcp_passthrough(g_l2cap_fd, tl, op, 0x80);
-                vTaskDelay(pdMS_TO_TICKS(500));
-                tl = (tl + 1) % 16;
-            }
-            if (!g_abort)
-            {
-                ESP_LOGI(TAG, "Done. Type another command.");
-            }
-        }
-
-        /* Give logging a moment to flush before showing the prompt */
-        vTaskDelay(pdMS_TO_TICKS(50));
-        printf("avrcp> ");
-        fflush(stdout);
-
-        /* Read a complete line (Enter to submit) */
-        while (!read_line(line, sizeof(line)))
-        {
-            vTaskDelay(pdMS_TO_TICKS(100));
-        }
-
-        /* Dispatch to the registered console command */
-        if (esp_console_run(line, &cmd_ret) == ESP_ERR_NOT_FOUND)
-        {
-            printf("Unknown command. Type 'help' for available commands.\n");
-        }
-    }
+    /* ── Hand off to the Bruce-style menu — never returns ── */
+    menu_run_main();
 }
