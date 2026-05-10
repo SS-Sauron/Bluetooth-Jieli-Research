@@ -19,6 +19,108 @@ items is claimed as a confirmed finding.
 | **Link‑key extraction / replay** | Investigate whether the Jieli chipset protects its link key and whether a captured key enables audio hijacking. | Full‑chain audio compromise would be the most impactful outcome of the research. |
 | **Automated CI/CD enhancements** | Expand the GitHub Actions pipeline to include documentation link‑checking, changelog validation, and automated release packaging. | Keeps the repository professional and contributor‑ready long‑term. |
 
+## 🕸️ Phase 1.5: ESP‑NOW Mesh (Wireless Communication Backbone)
+
+**Status:** Planned — not yet implemented.
+
+The scanner, attack ESP32, and future CrowPanel dashboard will communicate over
+ESP‑NOW, a peer‑to‑peer protocol with <2 ms latency and no Wi‑Fi router
+required.
+
+| Node | Role | Communication |
+|------|------|---------------|
+| **Scanner ESP32** | Continuous BLE + Classic scanning, sends device data to attack ESP32 and CrowPanel | ESP‑NOW sender |
+| **Attack ESP32** | AVRCP/JL‑SPP injection, receives target selection from CrowPanel | ESP‑NOW receiver |
+| **CrowPanel (ESP32‑S3)** | LVGL touch dashboard, central command hub | ESP‑NOW master |
+
+Shared protocol (`espnow_proto.h`): device_info_t, command_t with
+CMD_SEND_DEVICE, CMD_SET_TARGET, CMD_LAUNCH_ATTACK.
+
+---
+
+## 📟 Phase 1.3: CrowPanel Touch Dashboard
+
+**Status:** Hardware acquired (CrowPanel Advance 2.8" HMI, ESP32‑S3, ST7789
+display, GT911 touch). Factory demo confirmed working.
+
+The CrowPanel will replace the serial console as the primary user interface.
+
+- LVGL‑based touch UI with multiple tabs: Device Table, Attack Console, GPS Map,
+  HCI Console (future).
+- Device table (`lv_table`) fed by ESP‑NOW from the scanner ESP32.
+- Attack controls: select target, launch AVRCP/JL‑SPP, view status.
+- Battery‑powered via the onboard LiPo connector — fully portable.
+
+---
+
+## 🛰️ GPS Geolocation (Ai‑Thinker GP‑01)
+
+**Status:** Module acquired. Specs: AT6558R chip, NMEA‑0183 over UART, up to
+256,000 bps.
+
+- Connect to CrowPanel UART1 (GPIO17/18 are free).
+- Tag every scanner observation with coordinates.
+- Kismet on a companion laptop can also consume the GPS feed for passive
+  monitoring.
+
+---
+
+## 📻 nRF24L01 2.4 GHz Transceiver
+
+**Status:** Modules acquired. Fits into the CrowPanel’s replaceable wireless slot.
+
+- Dedicated SPI3 bus on CrowPanel (avoids conflict with display SPI and SD card
+  SPI).
+- Applications: 2.4 GHz jamming resilience testing, raw packet capture,
+  MouseJack‑style attacks.
+- The nRFBOX project (github.com/BS-code/NRF24L-Box) provides a reference
+  implementation for a handheld 2.4 GHz tool.
+
+---
+
+## 💾 SD Card “Black Box” Logger
+
+**Status:** CrowPanel has a dedicated SD card slot (SPI on GPIO4‑7).
+
+- Stream attack logs and captured PCAPs from the attack ESP32 over the UART
+  bridge (or ESP‑NOW) to the CrowPanel.
+- Write to SD card for persistent forensic records.
+- Protects data if the attack engine crashes or is physically disconnected.
+
+---
+
+## 🌐 Web UI (Wi‑Fi AP Mode)
+
+**Status:** Planned — not yet started.
+
+- Add a minimal HTTP server to the ESP32 firmware (ESP‑IDF’s http_server).
+- The CrowPanel can also host a web UI for phone‑browser control.
+- Design follows Bettercap’s REST API pattern: /api/scan, /api/connect,
+  /api/volup, etc.
+
+---
+
+## 📱 Android Thin‑Client App (Phase 2, Optional)
+
+**Status:** Deferred — not started.
+
+- A Kotlin app that connects to the CrowPanel over Wi‑Fi or BLE.
+- Sends high‑level commands (scan, select target, launch attack).
+- All Bluetooth Classic heavy lifting stays on the ESP32.
+- Reference: wpair‑app (defensive security research tool with ethical boundary
+  statements).
+
+---
+
+## 🔭 Completed / Superseded Items
+
+| Item | Status |
+|------|--------|
+| Bruce‑like menu system for ESP32 | ✅ Implemented (WASD game‑like navigation, Bruce InputHandler pattern) |
+| Dual‑mode BLE + Classic scanner | ✅ Implemented (live boxed dashboard, device tracker, command interface) |
+| Multi‑target support in ESP32 console | ⬜ Not yet — the attack ESP32 still uses a hardcoded default MAC. NVS‑stored target table is planned. |
+| JL‑SPP Channel 10 reverse‑engineering | ⬜ Not started — prerequisites: ESP‑NOW mesh to allow coordinated attacks. |
+
 ## ⚙️ Engineering & Reproducibility Improvements
 
 - **Python test suite** – add more unit tests that exercise opcode parsing and timing analysis logic.
