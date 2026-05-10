@@ -121,6 +121,42 @@ The CrowPanel will replace the serial console as the primary user interface.
 | Multi‑target support in ESP32 console | ⬜ Not yet — the attack ESP32 still uses a hardcoded default MAC. NVS‑stored target table is planned. |
 | JL‑SPP Channel 10 reverse‑engineering | ⬜ Not started — prerequisites: ESP‑NOW mesh to allow coordinated attacks. |
 
+## 📡 Phase 2: Baseband / LMP Fuzzing (HCI Vendor Commands)
+
+Reference: Tarlogic’s “ESP32 Hidden HCI Vendor Commands” (2025) documented 29
+undocumented vendor‑specific HCI opcodes in the ESP32’s Bluetooth controller
+firmware. These commands can be injected by an external host when the ESP32
+runs in controller‑only mode (HCI over UART).
+
+### Confirmed Vendor Opcodes (subset relevant to LMP injection)
+
+| Opcode   | Name              | Potential Use in This Project |
+|----------|-------------------|-------------------------------|
+| `0xFC10` | Send LMP Packet   | Raw Link Manager Protocol injection — baseband fuzzing |
+| `0xFC44` | Send LLCP Packet  | Raw Link Layer Control Protocol for BLE |
+| `0xFC35` | Set MAC Address   | MAC spoofing at the controller level |
+| `0xFC01` | Read Memory       | Dump controller RAM (link keys, pairing data) |
+| `0xFC02` | Write Memory      | Modify controller state |
+| `0xFC08` | Read Flash        | Extract controller firmware or stored parameters |
+| `0xFC07` | Write Flash       | Persistent modification of controller behavior |
+| `0xFC12` | Platform Reset    | Hard reset the Bluetooth controller only |
+| `0xFC37` | Discard LMP Msgs  | Suppress LMP messages — test resilience to missing handshakes |
+
+Full list of 29 opcodes is available in the Tarlogic article.
+
+### Planned HCI Injection Architecture
+
+- A dedicated **ESP32 HCI injector node** is planned, separate from the scanner
+  and attack ESP32. It runs the `controller_hci_uart` example firmware.
+- The CrowPanel (ESP32‑S3) will host an LVGL “HCI Console” tab to craft and
+  send raw HCI opcodes over UART to this injector.
+- This keeps dangerous controller‑level commands physically isolated from the
+  attack engine, preventing corruption of the active Bluetooth stack.
+- The BrakTooth research provides example LMP payloads that can be adapted
+  for the `0xFC10` opcode.
+  
+---
+
 ## ⚙️ Engineering & Reproducibility Improvements
 
 - **Python test suite** – add more unit tests that exercise opcode parsing and timing analysis logic.
