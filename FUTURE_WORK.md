@@ -156,6 +156,12 @@ Full list of 29 opcodes is available in the Tarlogic article.
   for the `0xFC10` opcode.
   
 ---
+**Status update (2026‑05‑11):** The external HCI‑UART path was tested on
+the ESP32‑D0WD‑V3 revision 3.1 and found to be **locked** – all vendor
+opcodes return `Unknown HCI Command (0x01)`. The VHCI (internal) path
+remains an untested alternative. See `docs/hci-vendor-commands-investigation.md`
+for full details.
+---
 
 ## ⚙️ Engineering & Reproducibility Improvements
 
