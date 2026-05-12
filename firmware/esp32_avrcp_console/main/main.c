@@ -19,9 +19,11 @@
 #include <unistd.h>
 #include <errno.h>
 #include <stdlib.h>
+#include <assert.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/semphr.h"
+#include "freertos/queue.h"
 #include "nvs_flash.h"
 #include "esp_bt.h"
 #include "esp_bt_main.h"
@@ -31,6 +33,11 @@
 #include "esp_log.h"
 #include "esp_mac.h"
 #include "esp_console.h"
+#include "esp_event.h"
+#include "esp_wifi.h"
+#include "esp_now.h"
+#include "esp_netif.h"
+#include "espnow_proto.h"
 
 #include "menu.h"   /* ← pulls in extern declarations + menu_run_main() */
 
@@ -44,6 +51,7 @@ esp_bd_addr_t g_target_addr = {
 SemaphoreHandle_t g_l2cap_sem     = NULL;
 SemaphoreHandle_t g_acl_disc_sem  = NULL;
 int               g_l2cap_fd      = -1;
+static QueueHandle_t g_espnow_queue = NULL;
 
 /* ── Runtime command parameters ─────────────────────────────────────── */
 volatile uint8_t  g_avrcp_opcode  = 0x41;
@@ -255,6 +263,91 @@ void do_disconnect(void)
     g_l2cap_fd = -1;
 }
 
+static void espnow_recv_cb(const esp_now_recv_info_t *recv_info,
+                           const uint8_t *data, int len)
+{
+    (void)recv_info;
+
+    if (len == sizeof(command_t))
+    {
+        command_t cmd;
+        memcpy(&cmd, data, sizeof(cmd));
+        if (g_espnow_queue)
+        {
+            xQueueSend(g_espnow_queue, &cmd, 0);
+        }
+    }
+}
+
+void espnow_receive_task(void *arg)
+{
+    (void)arg;
+
+    command_t cmd;
+    while (1)
+    {
+        if (xQueueReceive(g_espnow_queue, &cmd, portMAX_DELAY))
+        {
+            switch (cmd.cmd_id)
+            {
+            case CMD_SEND_DEVICE:
+                remote_device_update(&cmd.payload.device);
+                break;
+
+            case CMD_SET_TARGET:
+                memcpy(g_target_addr, cmd.payload.mac, 6);
+                break;
+
+            case CMD_LAUNCH_ATTACK:
+                break;
+
+            default:
+                break;
+            }
+        }
+    }
+}
+
+void espnow_init(void)
+{
+    static const uint8_t scanner_mac[6] = PEER_SCANNER_MAC;
+
+    ESP_ERROR_CHECK(esp_netif_init());
+
+    esp_err_t ret = esp_event_loop_create_default();
+    if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE)
+    {
+        ESP_ERROR_CHECK(ret);
+    }
+
+    esp_netif_t *sta = esp_netif_create_default_wifi_sta();
+    assert(sta);
+
+    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+    ESP_ERROR_CHECK(esp_wifi_start());
+
+    ESP_ERROR_CHECK(esp_now_init());
+    ESP_ERROR_CHECK(esp_now_register_recv_cb(espnow_recv_cb));
+
+    esp_now_peer_info_t peer = {
+        .channel = 0,
+        .encrypt = false,
+    };
+    memcpy(peer.peer_addr, scanner_mac, sizeof(peer.peer_addr));
+    ESP_ERROR_CHECK(esp_now_add_peer(&peer));
+
+    g_espnow_queue = xQueueCreate(16, sizeof(command_t));
+    assert(g_espnow_queue);
+    xTaskCreate(espnow_receive_task, "espnow_rx", 2048, NULL, 1, NULL);
+
+    ESP_LOGI(TAG, "ESP-NOW receiver ready. Peer (scanner): "
+                  "%02x:%02x:%02x:%02x:%02x:%02x",
+             scanner_mac[0], scanner_mac[1], scanner_mac[2],
+             scanner_mac[3], scanner_mac[4], scanner_mac[5]);
+}
+
 /* =========================================================
  * app_main
  * ---------------------------------------------------------
@@ -320,5 +413,6 @@ void app_main(void)
     vTaskDelay(pdMS_TO_TICKS(200)); /* brief pause so log flushes */
 
     /* ── Hand off to the Bruce-style menu — never returns ── */
+    espnow_init();
     menu_run_main();
 }
