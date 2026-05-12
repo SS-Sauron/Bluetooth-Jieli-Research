@@ -36,14 +36,14 @@
 /* ── ANSI escape helpers ────────────────────────────────────────────────
  * Standard VT100; works in idf.py monitor, PuTTY, screen, minicom.
  * ───────────────────────────────────────────────────────────────────── */
-#define A_CLEAR   "\033[2J\033[H"
-#define A_BOLD    "\033[1m"
-#define A_RST     "\033[0m"
-#define A_INV     "\033[7m"
-#define A_CYAN    "\033[36m"
-#define A_YELLOW  "\033[33m"
-#define A_GREEN   "\033[32m"
-#define A_RED     "\033[31m"
+#define A_CLEAR "\033[2J\033[H"
+#define A_BOLD "\033[1m"
+#define A_RST "\033[0m"
+#define A_INV "\033[7m"
+#define A_CYAN "\033[36m"
+#define A_YELLOW "\033[33m"
+#define A_GREEN "\033[32m"
+#define A_RED "\033[31m"
 
 /* ── Persistent AVRCP transaction label ─────────────────────────────── */
 static uint8_t s_tl = 0;
@@ -52,13 +52,29 @@ static uint8_t s_tl = 0;
  * Written exclusively by input_task() (main.c).
  * Read and cleared exclusively by check() and wait_key() (this file).
  * ───────────────────────────────────────────────────────────────────── */
-volatile bool    g_up_press     = false;
-volatile bool    g_down_press   = false;
-volatile bool    g_sel_press    = false;
-volatile bool    g_esc_press    = false;
-volatile bool    g_reboot_press = false;
-volatile bool    g_any_press    = false;
-volatile uint8_t g_direct_pick  = 0;
+volatile bool g_up_press = false;
+volatile bool g_down_press = false;
+volatile bool g_sel_press = false;
+volatile bool g_esc_press = false;
+volatile bool g_reboot_press = false;
+volatile bool g_any_press = false;
+volatile uint8_t g_direct_pick = 0;
+
+/* ── Remote device table (populated via ESP-NOW) ────────────────────── */
+remote_device_t g_remote_devices[MAX_REMOTE_DEVICES] = {0};
+uint8_t g_remote_device_count = 0;
+
+/* ── Selected device index for action_select_device() ───────────────── */
+static int g_selected_device_index = -1;
+
+/* ── External helpers from main.c ───────────────────────────────────── */
+extern char *bda2str(esp_bd_addr_t bda, char *str, size_t size);
+
+/* ── Lightweight timestamp ───────────────────────────────────────────── */
+static inline uint32_t get_now_ms(void)
+{
+    return xTaskGetTickCount() * portTICK_PERIOD_MS;
+}
 
 /* ── check() ─────────────────────────────────────────────────────────── *
  *
@@ -75,34 +91,44 @@ int check(void)
         return 0;
 
     /* Reboot: highest priority, clear sentinel immediately */
-    if (g_reboot_press) {
-        g_reboot_press = false;   /* individual flag first */
-        g_any_press    = false;   /* sentinel last         */
+    if (g_reboot_press)
+    {
+        g_reboot_press = false; /* individual flag first */
+        g_any_press = false;    /* sentinel last         */
         return 99;
     }
 
     int ret = 0;
 
-    if (g_any_press) {
-        if (g_up_press) {
-            g_up_press  = false;
+    if (g_any_press)
+    {
+        if (g_up_press)
+        {
+            g_up_press = false;
             ret = 1;
-        } else if (g_down_press) {
+        }
+        else if (g_down_press)
+        {
             g_down_press = false;
             ret = 2;
-        } else if (g_sel_press) {
-            g_sel_press  = false;
+        }
+        else if (g_sel_press)
+        {
+            g_sel_press = false;
             ret = 3;
-        } else if (g_esc_press) {
-            g_esc_press  = false;
+        }
+        else if (g_esc_press)
+        {
+            g_esc_press = false;
             ret = 4;
         }
-        g_any_press = false;   /* sentinel cleared last — always */
+        g_any_press = false; /* sentinel cleared last — always */
     }
 
     /* Direct pick overrides nav return if both arrive simultaneously */
-    if (g_direct_pick != 0) {
-        ret = 4 + (int)g_direct_pick;   /* 1-9 maps to 5-13 */
+    if (g_direct_pick != 0)
+    {
+        ret = 4 + (int)g_direct_pick; /* 1-9 maps to 5-13 */
         g_direct_pick = 0;
     }
 
@@ -116,13 +142,14 @@ int check(void)
  * ───────────────────────────────────────────────────────────────────── */
 static void wait_key(void)
 {
-    while (!g_any_press && g_direct_pick == 0) {
+    while (!g_any_press && g_direct_pick == 0)
+    {
         vTaskDelay(pdMS_TO_TICKS(10));
     }
     /* Clear everything — caller only needed "any key", not which one */
     g_up_press = g_down_press = g_sel_press =
-    g_esc_press = g_reboot_press = false;
-    g_any_press   = false;
+        g_esc_press = g_reboot_press = false;
+    g_any_press = false;
     g_direct_pick = 0;
 }
 
@@ -133,7 +160,7 @@ static void action_reboot(void);
  * Pure output — no input reads here.
  * ───────────────────────────────────────────────────────────────────── */
 static void render_menu(const menu_option_t *opts, int n,
-                         const char *title, int cursor)
+                        const char *title, int cursor)
 {
     printf(A_CLEAR);
 
@@ -143,27 +170,33 @@ static void render_menu(const menu_option_t *opts, int n,
            "└─────────────────────────────────────────┘\n" A_RST,
            title ? title : "");
 
-    if (g_l2cap_fd >= 0) {
+    if (g_l2cap_fd >= 0)
+    {
         printf(A_GREEN "  ● CONNECTED  "
-               "%02x:%02x:%02x:%02x:%02x:%02x\n" A_RST,
+                       "%02x:%02x:%02x:%02x:%02x:%02x\n" A_RST,
                g_target_addr[0], g_target_addr[1], g_target_addr[2],
                g_target_addr[3], g_target_addr[4], g_target_addr[5]);
-    } else {
+    }
+    else
+    {
         printf(A_RED "  ○ disconnected\n" A_RST);
     }
     printf("\n");
 
-    for (int i = 0; i < n; i++) {
-        if (i == cursor) {
+    for (int i = 0; i < n; i++)
+    {
+        if (i == cursor)
+        {
             printf(A_INV "  %d. %-38s" A_RST "\n", i + 1, opts[i].label);
-        } else {
+        }
+        else
+        {
             printf("  %d. %s\n", i + 1, opts[i].label);
         }
     }
 
     printf("\n" A_YELLOW
-           "  [W/S=↑↓] [A=back] [D/Enter=select] [1-9=pick] [Q/R=reboot]"
-           A_RST "\n  > ");
+           "  [W/S=↑↓] [A=back] [D/Enter=select] [1-9=pick] [Q/R=reboot]" A_RST "\n  > ");
     fflush(stdout);
 }
 
@@ -181,11 +214,13 @@ static void render_menu(const menu_option_t *opts, int n,
  * ───────────────────────────────────────────────────────────────────── */
 int loop_options(const menu_option_t *opts, int n, const char *title)
 {
-    if (!opts || n <= 0) return -1;
+    if (!opts || n <= 0)
+        return -1;
 
     int cursor = 0;
 
-    while (1) {
+    while (1)
+    {
         render_menu(opts, n, title, cursor);
 
         /* ── Poll for input with 10 ms RTOS yield ───────────────────────
@@ -194,61 +229,75 @@ int loop_options(const menu_option_t *opts, int n, const char *title)
          * Re-rendering only happens after a non-zero check() return.
          * ──────────────────────────────────────────────────────────────── */
         int cmd;
-        do {
+        do
+        {
             vTaskDelay(pdMS_TO_TICKS(10));
             cmd = check();
         } while (cmd == 0);
 
-        switch (cmd) {
-            case 1:   /* Up */
-                cursor = (cursor - 1 + n) % n;
-                break;
+        switch (cmd)
+        {
+        case 1: /* Up */
+            cursor = (cursor - 1 + n) % n;
+            break;
 
-            case 2:   /* Down */
-                cursor = (cursor + 1) % n;
-                break;
+        case 2: /* Down */
+            cursor = (cursor + 1) % n;
+            break;
 
-            case 3:   /* Select */
-                goto select_current;
+        case 3: /* Select */
+            goto select_current;
 
-            case 4:   /* Back / Escape */
-                printf(A_CLEAR);
-                return -1;
+        case 4: /* Back / Escape */
+            printf(A_CLEAR);
+            return -1;
 
-            /* Direct pick 1-9 (cmd 5-13, pick index = cmd - 5) */
-            case 5: case 6: case 7: case 8: case 9:
-            case 10: case 11: case 12: case 13:
+        /* Direct pick 1-9 (cmd 5-13, pick index = cmd - 5) */
+        case 5:
+        case 6:
+        case 7:
+        case 8:
+        case 9:
+        case 10:
+        case 11:
+        case 12:
+        case 13:
+        {
+            int pick = cmd - 5;
+            if (pick < n)
             {
-                int pick = cmd - 5;
-                if (pick < n) {
-                    cursor = pick;
-                    goto select_current;
-                }
-                /* Out of range: re-render without moving cursor */
-                break;
+                cursor = pick;
+                goto select_current;
             }
+            /* Out of range: re-render without moving cursor */
+            break;
+        }
 
-            case 99:  /* Reboot — available from any menu depth */
-                action_reboot();   /* never returns */
-                break;
+        case 99:             /* Reboot — available from any menu depth */
+            action_reboot(); /* never returns */
+            break;
 
-            default:
-                break;
+        default:
+            break;
         }
         /* Cursor moved or out-of-range pick: loop back to render_menu() */
         continue;
 
     select_current:
-        if (opts[cursor].is_back) {
+        if (opts[cursor].is_back)
+        {
             printf(A_CLEAR);
             return -1;
         }
 
-        if (opts[cursor].op) {
+        if (opts[cursor].op)
+        {
             opts[cursor].op();
             /* After action returns: loop back, re-render.
              * This is the Bruce loopOptions() pattern.    */
-        } else {
+        }
+        else
+        {
             /* Stub option: show "not yet implemented", wait for any key */
             printf("\n" A_YELLOW
                    "  [!] '%s' — not yet implemented.\n"
@@ -280,7 +329,8 @@ static void wait_enter(const char *msg)
 
 static void action_connect(void)
 {
-    if (g_l2cap_fd >= 0) {
+    if (g_l2cap_fd >= 0)
+    {
         printf("\n" A_YELLOW "  Already connected. Disconnect first.\n" A_RST);
         vTaskDelay(pdMS_TO_TICKS(1500));
         return;
@@ -295,15 +345,19 @@ static void action_connect(void)
     read_line(buf, sizeof(buf));
 
     esp_bd_addr_t addr;
-    if (buf[0] != '\0') {
+    if (buf[0] != '\0')
+    {
         if (sscanf(buf, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
                    &addr[0], &addr[1], &addr[2],
-                   &addr[3], &addr[4], &addr[5]) != 6) {
+                   &addr[3], &addr[4], &addr[5]) != 6)
+        {
             printf(A_RED "  Bad MAC format. Use XX:XX:XX:XX:XX:XX\n" A_RST);
             vTaskDelay(pdMS_TO_TICKS(2000));
             return;
         }
-    } else {
+    }
+    else
+    {
         memcpy(addr, g_target_addr, sizeof(esp_bd_addr_t));
     }
 
@@ -313,10 +367,13 @@ static void action_connect(void)
 
     const char *err_str = NULL;
     esp_err_t ret = do_connect(addr, &err_str);
-    if (ret == ESP_OK) {
+    if (ret == ESP_OK)
+    {
         printf(A_GREEN "  Connected.\n" A_RST);
         vTaskDelay(pdMS_TO_TICKS(1000));
-    } else {
+    }
+    else
+    {
         printf(A_RED "  Failed: %s (0x%x)\n" A_RST,
                err_str ? err_str : "unknown", ret);
         vTaskDelay(pdMS_TO_TICKS(2000));
@@ -325,7 +382,8 @@ static void action_connect(void)
 
 static void send_volume(uint8_t opcode, const char *name)
 {
-    if (g_l2cap_fd < 0) {
+    if (g_l2cap_fd < 0)
+    {
         printf("\n" A_RED "  Not connected.\n" A_RST);
         vTaskDelay(pdMS_TO_TICKS(1500));
         return;
@@ -337,7 +395,8 @@ static void send_volume(uint8_t opcode, const char *name)
     read_line(buf, sizeof(buf));
 
     int count = (buf[0] != '\0') ? atoi(buf) : 15;
-    if (count <= 0) {
+    if (count <= 0)
+    {
         printf("  Nothing to do.\n");
         vTaskDelay(pdMS_TO_TICKS(800));
         return;
@@ -347,8 +406,10 @@ static void send_volume(uint8_t opcode, const char *name)
     fflush(stdout);
 
     g_abort = false;
-    for (int i = 0; i < count; i++) {
-        if (g_abort || g_l2cap_fd < 0) {
+    for (int i = 0; i < count; i++)
+    {
+        if (g_abort || g_l2cap_fd < 0)
+        {
             printf(A_YELLOW "  Interrupted at press %d.\n" A_RST, i + 1);
             break;
         }
@@ -359,18 +420,20 @@ static void send_volume(uint8_t opcode, const char *name)
         s_tl = (s_tl + 1) & 0x0F;
     }
 
-    if (!g_abort && g_l2cap_fd >= 0) {
+    if (!g_abort && g_l2cap_fd >= 0)
+    {
         printf(A_GREEN "  Done.\n" A_RST);
     }
     vTaskDelay(pdMS_TO_TICKS(600));
 }
 
-static void action_vol_up(void)   { send_volume(0x41, "Volume Up");   }
+static void action_vol_up(void) { send_volume(0x41, "Volume Up"); }
 static void action_vol_down(void) { send_volume(0x42, "Volume Down"); }
 
 static void action_disconnect(void)
 {
-    if (g_l2cap_fd < 0) {
+    if (g_l2cap_fd < 0)
+    {
         printf("\n  Not connected.\n");
         vTaskDelay(pdMS_TO_TICKS(1000));
         return;
@@ -393,6 +456,7 @@ static void action_status(void)
            g_target_addr[3], g_target_addr[4], g_target_addr[5]);
     printf("  | l2cap_fd   : %-24d|\n", g_l2cap_fd);
     printf("  | TL counter : %-24u|\n", (unsigned)s_tl);
+    printf("  | Devices    : %-24u|\n", (unsigned)g_remote_device_count);
     printf("  +--------------------------------------+\n");
     wait_enter(NULL);
 }
@@ -406,6 +470,234 @@ static void action_reboot(void)
     esp_restart();
 }
 
+/* ── remote_device_update() ─────────────────────────────────────────────
+ * Called from espnow_receive_task() in main.c whenever a CMD_SEND_DEVICE
+ * packet arrives from the scanner ESP32.
+ * ───────────────────────────────────────────────────────────────────── */
+void remote_device_update(device_info_t *d)
+{
+    /* Search for existing MAC */
+    for (int i = 0; i < MAX_REMOTE_DEVICES; i++)
+    {
+        if (g_remote_devices[i].in_use &&
+            memcmp(g_remote_devices[i].bda, d->bda, 6) == 0)
+        {
+            /* Update existing entry */
+            g_remote_devices[i].rssi = d->rssi;
+            g_remote_devices[i].cod = d->cod;
+            g_remote_devices[i].type = d->type;
+            g_remote_devices[i].last_seen_ms = get_now_ms();
+            if (d->name[0])
+            {
+                strncpy(g_remote_devices[i].name, d->name, 31);
+                g_remote_devices[i].name[31] = '\0';
+            }
+            return;
+        }
+    }
+    /* Insert new entry in first free slot */
+    for (int i = 0; i < MAX_REMOTE_DEVICES; i++)
+    {
+        if (!g_remote_devices[i].in_use)
+        {
+            memset(&g_remote_devices[i], 0, sizeof(g_remote_devices[i]));
+            memcpy(g_remote_devices[i].bda, d->bda, 6);
+            g_remote_devices[i].in_use = true;
+            g_remote_devices[i].rssi = d->rssi;
+            g_remote_devices[i].cod = d->cod;
+            g_remote_devices[i].type = d->type;
+            g_remote_devices[i].last_seen_ms = get_now_ms();
+            if (d->name[0])
+            {
+                strncpy(g_remote_devices[i].name, d->name, 31);
+                g_remote_devices[i].name[31] = '\0';
+            }
+            g_remote_device_count++;
+            return;
+        }
+    }
+    /* Table full — silently drop */
+}
+
+/* ── action_select_device() ─────────────────────────────────────────────
+ * Copies the MAC of the device at g_selected_device_index into
+ * g_target_addr and prints a brief confirmation.
+ * ───────────────────────────────────────────────────────────────────── */
+static void action_select_device(void)
+{
+    int idx = g_selected_device_index;
+    if (idx < 0 || idx >= MAX_REMOTE_DEVICES || !g_remote_devices[idx].in_use)
+    {
+        printf("\n" A_RED "  Invalid device selection.\n" A_RST);
+        vTaskDelay(pdMS_TO_TICKS(1500));
+        return;
+    }
+
+    memcpy(g_target_addr, g_remote_devices[idx].bda, sizeof(esp_bd_addr_t));
+
+    printf("\n" A_GREEN "  Target set: %02x:%02x:%02x:%02x:%02x:%02x  %s\n" A_RST,
+           g_target_addr[0], g_target_addr[1], g_target_addr[2],
+           g_target_addr[3], g_target_addr[4], g_target_addr[5],
+           g_remote_devices[idx].name[0] ? g_remote_devices[idx].name : "(unknown)");
+    vTaskDelay(pdMS_TO_TICKS(1200));
+}
+
+/* ── submenu_devices() ──────────────────────────────────────────────────
+ * Displays all devices received from the scanner ESP32 via ESP-NOW and
+ * lets the user pick one as the attack target.
+ * ───────────────────────────────────────────────────────────────────── */
+static void submenu_devices(void)
+{
+    /* Count active entries */
+    int active = 0;
+    for (int i = 0; i < MAX_REMOTE_DEVICES; i++)
+    {
+        if (g_remote_devices[i].in_use)
+        {
+            active++;
+        }
+    }
+
+    if (active == 0)
+    {
+        printf(A_CLEAR);
+        printf("\n" A_YELLOW "  No devices received yet.\n" A_RST);
+        fflush(stdout);
+        vTaskDelay(pdMS_TO_TICKS(1800));
+        return;
+    }
+
+    /* Allocate index_map and menu entries (+1 for Back) */
+    int *index_map = calloc(active, sizeof(int));
+    menu_option_t *opts = calloc(active + 1, sizeof(menu_option_t));
+    /* Each label: "XX:XX:XX:XX:XX:XX  Cls  -99  name..." */
+    char (*labels)[56] = calloc(active, sizeof(*labels));
+
+    if (!index_map || !opts || !labels)
+    {
+        free(index_map);
+        free(opts);
+        free(labels);
+        printf("\n" A_RED "  Out of memory.\n" A_RST);
+        vTaskDelay(pdMS_TO_TICKS(1500));
+        return;
+    }
+
+    /* Populate entries */
+    int slot = 0;
+    char bda_str[18];
+    for (int i = 0; i < MAX_REMOTE_DEVICES && slot < active; i++)
+    {
+        if (!g_remote_devices[i].in_use)
+            continue;
+
+        bda2str(g_remote_devices[i].bda, bda_str, sizeof(bda_str));
+        const char *type_str = (g_remote_devices[i].type == 1) ? "BLE" : "Cls";
+        const char *name_str = g_remote_devices[i].name[0]
+                                   ? g_remote_devices[i].name
+                                   : "(unknown)";
+
+        snprintf(labels[slot], sizeof(*labels),
+                 "%-17s %-3s %4d  %.18s",
+                 bda_str, type_str,
+                 (int)g_remote_devices[i].rssi,
+                 name_str);
+
+        index_map[slot] = i;
+        opts[slot].label = labels[slot];
+        opts[slot].op = NULL;
+        opts[slot].is_back = false;
+        slot++;
+    }
+
+    /* Back entry */
+    opts[active].label = "Back";
+    opts[active].op = NULL;
+    opts[active].is_back = true;
+
+    int n = active + 1;
+    int cursor = 0;
+
+    /* Navigation loop */
+    while (1)
+    {
+        render_menu(opts, n, "DEVICE LIST", cursor);
+
+        int cmd;
+        do
+        {
+            vTaskDelay(pdMS_TO_TICKS(10));
+            cmd = check();
+        } while (cmd == 0);
+
+        switch (cmd)
+        {
+        case 1: /* Up */
+            cursor = (cursor - 1 + n) % n;
+            break;
+
+        case 2: /* Down */
+            cursor = (cursor + 1) % n;
+            break;
+
+        case 3: /* Select */
+            if (opts[cursor].is_back)
+            {
+                printf(A_CLEAR);
+                goto devices_done;
+            }
+            g_selected_device_index = index_map[cursor];
+            action_select_device();
+            goto devices_done;
+
+        case 4: /* Back */
+            printf(A_CLEAR);
+            goto devices_done;
+
+        case 5:
+        case 6:
+        case 7:
+        case 8:
+        case 9:
+        case 10:
+        case 11:
+        case 12:
+        case 13:
+        {
+            int pick = cmd - 5;
+            if (pick < n)
+            {
+                cursor = pick;
+                if (opts[cursor].is_back)
+                {
+                    printf(A_CLEAR);
+                    goto devices_done;
+                }
+                g_selected_device_index = index_map[cursor];
+                action_select_device();
+                goto devices_done;
+            }
+            break;
+        }
+
+        case 99: /* Reboot */
+            free(index_map);
+            free(opts);
+            free(labels);
+            action_reboot(); /* never returns */
+            break;
+
+        default:
+            break;
+        }
+    }
+
+devices_done:
+    free(index_map);
+    free(opts);
+    free(labels);
+}
+
 /* ════════════════════════════════════════════════════════════════════════
  * Submenu builders — each calls loop_options() with a local opts[] array.
  * ════════════════════════════════════════════════════════════════════════ */
@@ -413,10 +705,10 @@ static void action_reboot(void)
 static void submenu_avrcp(void)
 {
     static const menu_option_t opts[] = {
-        MENU_OPT("Connect",      action_connect),
-        MENU_OPT("Volume Up",    action_vol_up),
-        MENU_OPT("Volume Down",  action_vol_down),
-        MENU_OPT("Disconnect",   action_disconnect),
+        MENU_OPT("Connect", action_connect),
+        MENU_OPT("Volume Up", action_vol_up),
+        MENU_OPT("Volume Down", action_vol_down),
+        MENU_OPT("Disconnect", action_disconnect),
         MENU_BACK(),
     };
     loop_options(opts, sizeof(opts) / sizeof(opts[0]), "AVRCP");
@@ -434,6 +726,35 @@ static void submenu_jlspp(void)
     loop_options(opts, sizeof(opts) / sizeof(opts[0]), "JL-SPP");
 }
 
+static void submenu_bluetooth(void)
+{
+    static const menu_option_t opts[] = {
+        MENU_OPT("AVRCP", submenu_avrcp),
+        MENU_OPT("JL-SPP", submenu_jlspp),
+        MENU_OPT("Device List", submenu_devices),
+        MENU_BACK(),
+    };
+    loop_options(opts, sizeof(opts) / sizeof(opts[0]), "BLUETOOTH");
+}
+
+static void submenu_wifi(void)
+{
+    static const menu_option_t opts[] = {
+        MENU_STUB("Wi-Fi scanning [future]"),
+        MENU_BACK(),
+    };
+    loop_options(opts, sizeof(opts) / sizeof(opts[0]), "WI-FI");
+}
+
+static void submenu_rfid(void)
+{
+    static const menu_option_t opts[] = {
+        MENU_STUB("RFID [future]"),
+        MENU_BACK(),
+    };
+    loop_options(opts, sizeof(opts) / sizeof(opts[0]), "RFID");
+}
+
 /* ════════════════════════════════════════════════════════════════════════
  * menu_run_main() — top-level entry point.
  *
@@ -444,14 +765,16 @@ static void submenu_jlspp(void)
 void menu_run_main(void)
 {
     static const menu_option_t main_opts[] = {
-        MENU_OPT("AVRCP",    submenu_avrcp),
-        MENU_OPT("JL-SPP",   submenu_jlspp),
-        MENU_OPT("Status",   action_status),
-        MENU_OPT("Reboot",   action_reboot),
+        MENU_OPT("Bluetooth", submenu_bluetooth),
+        MENU_OPT("Wi-Fi [future]", submenu_wifi),
+        MENU_OPT("RFID [future]", submenu_rfid),
+        MENU_OPT("Status", action_status),
+        MENU_OPT("Reboot", action_reboot),
     };
     const int n = sizeof(main_opts) / sizeof(main_opts[0]);
 
-    for (;;) {
+    for (;;)
+    {
         loop_options(main_opts, n, "MAIN");
     }
 }

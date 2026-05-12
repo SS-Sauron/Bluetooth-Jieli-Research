@@ -26,12 +26,15 @@
 #include "esp_gap_ble_api.h"
 #include "driver/uart.h"
 #include "driver/uart_vfs.h"
-#include <fcntl.h>
+#include "esp_netif.h"
+#include "esp_wifi.h"
+#include "esp_now.h"
+#include "espnow_proto.h"
 
 #define GAP_TAG "GAP"
 #define MAX_TRACKED_DEVICES 64
 #define MAX_DISPLAY_ROWS 12
-#define SCANNER_DEBUG 1 // Set to 0 to silence all debug prints
+#define SCANNER_DEBUG 1
 
 static const char *TAG = "BT_SCANNER";
 static volatile bool g_scan_enabled = true; // start scanning at boot
@@ -42,6 +45,9 @@ static volatile bool g_ble_scan_stop_pending = false;
 static volatile bool g_ble_scanning = false;
 static volatile bool g_show_table = true;
 static uint32_t g_scan_cycle_count = 0;
+
+/* Attack ESP32 peer MAC — shared by espnow_init() and send_device_over_espnow() */
+static const uint8_t s_attack_mac[6] = PEER_ATTACK_MAC;
 
 static esp_ble_scan_params_t ble_scan_params = {
     .scan_type = BLE_SCAN_TYPE_ACTIVE,
@@ -345,6 +351,51 @@ static void log_ble_service_uuids(uint8_t *adv_data, uint16_t adv_len)
     }
 }
 
+/* ── ESP-NOW helpers ────────────────────────────────────────────────────── */
+
+/*
+ * send_device_over_espnow() — pack a device_entry_t into a command_t and
+ * fire it over ESP-NOW to the attack ESP32.  Fire-and-forget: errors are
+ * logged but do not affect the scan loop.
+ */
+static void send_device_over_espnow(device_entry_t *entry)
+{
+    command_t cmd;
+    memset(&cmd, 0, sizeof(cmd));
+
+    cmd.cmd_id = CMD_SEND_DEVICE;
+
+    /* BD_ADDR */
+    memcpy(cmd.payload.device.bda, entry->bda, sizeof(cmd.payload.device.bda));
+
+    /* Name — device_info_t.name is char[32]; bdname is uint8_t[] */
+    size_t name_len = entry->bdname_len < (sizeof(cmd.payload.device.name) - 1)
+                          ? entry->bdname_len
+                          : sizeof(cmd.payload.device.name) - 1;
+    memcpy(cmd.payload.device.name, entry->bdname, name_len);
+    cmd.payload.device.name[name_len] = '\0';
+
+    cmd.payload.device.rssi = entry->rssi;
+    cmd.payload.device.cod = entry->cod;
+    cmd.payload.device.type = (entry->cod != 0) ? 0 : 1; /* 0=Classic, 1=BLE */
+
+    esp_err_t ret = esp_now_send(s_attack_mac, (const uint8_t *)&cmd, sizeof(cmd));
+    if (ret == ESP_OK)
+    {
+#if SCANNER_DEBUG
+        ESP_LOGI(TAG, "ESP-NOW sent device %02x:%02x:%02x:%02x:%02x:%02x",
+                 entry->bda[0], entry->bda[1], entry->bda[2],
+                 entry->bda[3], entry->bda[4], entry->bda[5]);
+#endif
+    }
+    else
+    {
+        ESP_LOGW(TAG, "ESP-NOW send failed: %s", esp_err_to_name(ret));
+    }
+}
+
+/* ── BLE scan result handler ─────────────────────────────────────────────── */
+
 static void log_ble_scan_result(esp_ble_gap_cb_param_t *param)
 {
     char bda_str[18];
@@ -394,6 +445,9 @@ static void log_ble_scan_result(esp_ble_gap_cb_param_t *param)
             log_ble_service_uuids(param->scan_rst.ble_adv, adv_len);
         }
     }
+
+    /* Forward device to attack ESP32 over ESP-NOW */
+    send_device_over_espnow(entry);
 }
 
 static void ble_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param)
@@ -556,6 +610,10 @@ static void update_device_info(esp_bt_gap_cb_param_t *param)
                  entry->cod,
                  entry->bdname_len > 0 ? (char *)entry->bdname : "(unknown)");
     }
+
+    /* Forward device to attack ESP32 over ESP-NOW */
+    send_device_over_espnow(entry);
+
     p_dev->state = APP_GAP_STATE_DEVICE_DISCOVER_COMPLETE;
 }
 
@@ -754,7 +812,7 @@ static void dashboard_task(void *arg)
                 snprintf(age_str, sizeof(age_str), "%" PRIu32 "s", age_ms / 1000);
 
                 /* Build row from the same COL_* widths as the header */
-                char row[320];
+                char row[320]; // safe upper bound for formatted row + name
                 snprintf(row, sizeof(row),
                          "%-*s  %-*s  %*d  %*s  %s",
                          COL_MAC, bda2str(entry->bda, bda_str, sizeof(bda_str)),
@@ -814,14 +872,8 @@ static void scan_control_task(void *arg)
     char buf[32];
     while (1)
     {
-#if SCANNER_DEBUG
-        printf("[input loop]\n");
-#endif
         if (fgets(buf, sizeof(buf), stdin))
         {
-#if SCANNER_DEBUG
-            printf("Got: %s\n", buf);
-#endif
             if (strncmp(buf, "stop", 4) == 0)
             {
                 g_scan_enabled = false;
@@ -847,12 +899,74 @@ static void scan_control_task(void *arg)
                 printf("Scan started.\n");
             }
         }
-        else
-        {
-            printf("fgets returned NULL\n");
-        }
         vTaskDelay(pdMS_TO_TICKS(100));
     }
+}
+
+/* ── ESP-NOW initialisation ─────────────────────────────────────────────── */
+
+/*
+ * espnow_send_cb() — fire-and-forget send callback.
+ * Errors are visible in the log from send_device_over_espnow(); no
+ * additional action is required here.
+ */
+static void espnow_send_cb(const esp_now_send_info_t *tx_info, esp_now_send_status_t status)
+{
+    (void)tx_info;
+    if (status != ESP_NOW_SEND_SUCCESS)
+    {
+        ESP_LOGW(TAG, "ESP-NOW send callback: delivery failed");
+    }
+}
+
+/*
+ * espnow_init() — bring up Wi-Fi STA + ESP-NOW and register the attack
+ * ESP32 as the sole peer.  Called once from app_main() after Bluetooth
+ * init completes.  The ESP32 supports BT+Wi-Fi coexistence natively.
+ *
+ * NVS is already initialised by app_main() before this call, so we do
+ * not call nvs_flash_init() again here.
+ */
+static void espnow_init(void)
+{
+    /* netif + default event loop are required before esp_wifi_init() */
+    ESP_ERROR_CHECK(esp_netif_init());
+
+    esp_err_t ret = esp_event_loop_create_default();
+    if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE)
+    {
+        /* ESP_ERR_INVALID_STATE means the loop already exists — that is fine */
+        ESP_ERROR_CHECK(ret);
+    }
+
+    esp_netif_t *sta_netif = esp_netif_create_default_wifi_sta();
+    if (!sta_netif)
+    {
+        ESP_LOGE(TAG, "espnow_init: failed to create default Wi-Fi STA netif");
+        return;
+    }
+
+    wifi_init_config_t wifi_cfg = WIFI_INIT_CONFIG_DEFAULT();
+    ESP_ERROR_CHECK(esp_wifi_init(&wifi_cfg));
+    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+    ESP_ERROR_CHECK(esp_wifi_start());
+
+    ESP_ERROR_CHECK(esp_now_init());
+    ESP_ERROR_CHECK(esp_now_register_send_cb(espnow_send_cb));
+
+    /* Register attack ESP32 (78:1c:3c:a5:a8:d2) as peer */
+    esp_now_peer_info_t peer;
+    memset(&peer, 0, sizeof(peer));
+    memcpy(peer.peer_addr, s_attack_mac, sizeof(peer.peer_addr));
+    peer.channel = 0;
+    peer.encrypt = false;
+
+    ESP_ERROR_CHECK(esp_now_add_peer(&peer));
+
+    ESP_LOGI(TAG, "ESP-NOW ready. Peer (attack ESP32): "
+                  "%02x:%02x:%02x:%02x:%02x:%02x",
+             s_attack_mac[0], s_attack_mac[1], s_attack_mac[2],
+             s_attack_mac[3], s_attack_mac[4], s_attack_mac[5]);
 }
 
 void app_main(void)
@@ -903,17 +1017,8 @@ void app_main(void)
     ESP_ERROR_CHECK(uart_driver_install(CONFIG_ESP_CONSOLE_UART_NUM, 256, 0, 0, NULL, 0));
     uart_vfs_dev_use_driver(CONFIG_ESP_CONSOLE_UART_NUM);
 
-    /* Explicitly clear O_NONBLOCK on stdin so fgets() waits for Enter.
-     * uart_vfs_dev_use_driver() alone doesn't change the blocking mode. */
-    int fd = fileno(stdin);
-    if (fd >= 0)
-    {
-        int flags = fcntl(fd, F_GETFL, 0);
-        if (flags >= 0)
-        {
-            fcntl(fd, F_SETFL, flags & ~O_NONBLOCK);
-        }
-    }
+    /* Bring up ESP-NOW (Wi-Fi STA + peer registration) */
+    espnow_init();
 
     xTaskCreate(scan_control_task, "scan_ctrl", 2048, NULL, 1, NULL);
     xTaskCreate(dashboard_task, "dashboard", 2048, NULL, 1, NULL);
