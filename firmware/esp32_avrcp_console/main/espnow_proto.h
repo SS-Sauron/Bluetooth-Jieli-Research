@@ -17,7 +17,7 @@
 /* ── Peer MAC addresses ─────────────────────────────────────────────────── */
 
 #define PEER_SCANNER_MAC {0x78, 0x1c, 0x3c, 0xa8, 0xdc, 0x72}
-#define PEER_ATTACK_MAC {0x78, 0x1c, 0x3c, 0xa5, 0xa8, 0xd2}
+#define PEER_ATTACK_MAC {0x78, 0x1c, 0x3c, 0xa5, 0xa8, 0xd0}
 
 /* ── Command IDs ────────────────────────────────────────────────────────── */
 

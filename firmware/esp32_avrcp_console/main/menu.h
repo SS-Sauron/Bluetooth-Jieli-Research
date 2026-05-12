@@ -40,6 +40,14 @@ extern "C"
     extern volatile uint8_t g_avrcp_opcode;
     extern volatile int g_repeats;
     extern volatile bool g_abort;
+    /* ── Input flags (defined in menu.c, set by input_task) ─────────────── */
+    extern volatile bool g_up_press;
+    extern volatile bool g_down_press;
+    extern volatile bool g_sel_press;
+    extern volatile bool g_esc_press;
+    extern volatile bool g_reboot_press;
+    extern volatile bool g_any_press;
+    extern volatile uint8_t g_direct_pick;
 
     /* ── Shared functions (defined in main.c) ───────────────────────────── */
     bool read_line(char *buf, size_t len);

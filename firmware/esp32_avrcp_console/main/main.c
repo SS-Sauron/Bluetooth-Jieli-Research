@@ -39,7 +39,7 @@
 #include "esp_netif.h"
 #include "espnow_proto.h"
 
-#include "menu.h"   /* ← pulls in extern declarations + menu_run_main() */
+#include "menu.h" /* ← pulls in extern declarations + menu_run_main() */
 
 #define TAG "AVRCP"
 
@@ -48,15 +48,15 @@ esp_bd_addr_t g_target_addr = {
     0xF4, 0xB6, 0x2D, 0xAE, 0xAB, 0xE0};
 
 /* ── Global L2CAP state ──────────────────────────────────────────────── */
-SemaphoreHandle_t g_l2cap_sem     = NULL;
-SemaphoreHandle_t g_acl_disc_sem  = NULL;
-int               g_l2cap_fd      = -1;
+SemaphoreHandle_t g_l2cap_sem = NULL;
+SemaphoreHandle_t g_acl_disc_sem = NULL;
+int g_l2cap_fd = -1;
 static QueueHandle_t g_espnow_queue = NULL;
 
 /* ── Runtime command parameters ─────────────────────────────────────── */
-volatile uint8_t  g_avrcp_opcode  = 0x41;
-volatile int      g_repeats       = 0;
-volatile bool     g_abort         = false;
+volatile uint8_t g_avrcp_opcode = 0x41;
+volatile int g_repeats = 0;
+volatile bool g_abort = false;
 
 /* =========================================================
  * read_line — stable line reader (no ANSI escapes)
@@ -109,7 +109,7 @@ bool read_line(char *buf, size_t len)
  * state:   0x00=Press, 0x80=Release
  * ========================================================= */
 void send_avrcp_passthrough(int fd, uint8_t tl,
-                             uint8_t op_data, uint8_t state)
+                            uint8_t op_data, uint8_t state)
 {
     uint8_t pkt[8];
     pkt[0] = (tl << 4) & 0xF0;
@@ -137,7 +137,7 @@ void send_avrcp_passthrough(int fd, uint8_t tl,
  * L2CAP event callback
  * ========================================================= */
 static void l2cap_callback(esp_bt_l2cap_cb_event_t event,
-                            esp_bt_l2cap_cb_param_t *param)
+                           esp_bt_l2cap_cb_param_t *param)
 {
     switch (event)
     {
@@ -166,7 +166,7 @@ static void l2cap_callback(esp_bt_l2cap_cb_event_t event,
  * GAP callback
  * ========================================================= */
 static void gap_callback(esp_bt_gap_cb_event_t event,
-                          esp_bt_gap_cb_param_t *param)
+                         esp_bt_gap_cb_param_t *param)
 {
     if (event == ESP_BT_GAP_ACL_DISCONN_CMPL_STAT_EVT)
     {
@@ -308,6 +308,121 @@ void espnow_receive_task(void *arg)
     }
 }
 
+/* ── Bruce-pattern input task ────────────────────────────────────────
+ * Reads raw keystrokes from stdin and sets global input flags.
+ * Runs forever at priority 1.  The menu system calls check() which
+ * atomically reads and clears these flags.
+ * ─────────────────────────────────────────────────────────────────── */
+void input_task(void *arg)
+{
+    (void)arg;
+    while (1)
+    {
+        int ch = getchar();
+        if (ch == EOF)
+        {
+            vTaskDelay(pdMS_TO_TICKS(10));
+            continue;
+        }
+
+        /* ── Arrow key escape sequences ────────────────────────────────
+         * VT100: ESC [ A/B/C/D  =  up/down/right/left
+         * We poll with a short timeout to see if the next bytes are
+         * the bracket + arrow code.  If not, treat ESC as Back.
+         * ────────────────────────────────────────────────────────────── */
+        if (ch == 27)
+        { /* ESC */
+            /* Poll for '[' within 50 ms */
+            int c2 = EOF;
+            for (int i = 0; i < 10; i++)
+            {
+                vTaskDelay(pdMS_TO_TICKS(5));
+                c2 = getchar();
+                if (c2 != EOF)
+                    break;
+            }
+            if (c2 == '[')
+            {
+                /* Poll for the arrow letter */
+                int c3 = EOF;
+                for (int i = 0; i < 10; i++)
+                {
+                    vTaskDelay(pdMS_TO_TICKS(5));
+                    c3 = getchar();
+                    if (c3 != EOF)
+                        break;
+                }
+                switch (c3)
+                {
+                case 'A': /* Up */
+                    g_up_press = true;
+                    break;
+                case 'B': /* Down */
+                    g_down_press = true;
+                    break;
+                case 'C': /* Right → treat as Select */
+                    g_sel_press = true;
+                    break;
+                case 'D': /* Left → treat as Back */
+                    g_esc_press = true;
+                    break;
+                default: /* Unknown — treat ESC as Back */
+                    g_esc_press = true;
+                    break;
+                }
+            }
+            else
+            {
+                /* ESC followed by something else → Back */
+                g_esc_press = true;
+            }
+            g_any_press = true;
+            continue;
+        }
+
+        /* ── Regular keys ──────────────────────────────────────────── */
+        switch (ch)
+        {
+        case 'w':
+        case 'W':
+            g_up_press = true;
+            break;
+        case 's':
+        case 'S':
+            g_down_press = true;
+            break;
+        case 'a':
+        case 'A':
+            g_esc_press = true;
+            break;
+        case 'd':
+        case 'D':
+        case '\r':
+        case '\n':
+            g_sel_press = true;
+            break;
+        case 'q':
+        case 'Q':
+        case 'r':
+        case 'R':
+            g_reboot_press = true;
+            break;
+        case '1' ... '9':
+            g_direct_pick = (uint8_t)(ch - '0');
+            break;
+        default:
+            break;
+        }
+        if (ch == 'w' || ch == 'W' || ch == 's' || ch == 'S' ||
+            ch == 'a' || ch == 'A' || ch == 'd' || ch == 'D' ||
+            ch == '\r' || ch == '\n' || ch == 'q' || ch == 'Q' ||
+            ch == 'r' || ch == 'R' || (ch >= '1' && ch <= '9'))
+        {
+            g_any_press = true;
+        }
+    }
+}
+
 void espnow_init(void)
 {
     static const uint8_t scanner_mac[6] = PEER_SCANNER_MAC;
@@ -348,6 +463,19 @@ void espnow_init(void)
              scanner_mac[3], scanner_mac[4], scanner_mac[5]);
 }
 
+/* ── Bluetooth address to string ───────────────────────────────────── */
+char *bda2str(esp_bd_addr_t bda, char *str, size_t size)
+{
+    if (bda == NULL || str == NULL || size < 18)
+    {
+        return "";
+    }
+    uint8_t *p = bda;
+    snprintf(str, size, "%02x:%02x:%02x:%02x:%02x:%02x",
+             p[0], p[1], p[2], p[3], p[4], p[5]);
+    return str;
+}
+
 /* =========================================================
  * app_main
  * ---------------------------------------------------------
@@ -377,17 +505,17 @@ void app_main(void)
     ESP_ERROR_CHECK(esp_bluedroid_enable());
 
     /* Suppress low-level BT stack chatter */
-    esp_log_level_set("BT_HCI",   ESP_LOG_NONE);
-    esp_log_level_set("BT_APPL",  ESP_LOG_NONE);
+    esp_log_level_set("BT_HCI", ESP_LOG_NONE);
+    esp_log_level_set("BT_APPL", ESP_LOG_NONE);
     esp_log_level_set("BT_L2CAP", ESP_LOG_NONE);
-    esp_log_level_set("BT_BTM",   ESP_LOG_NONE);
+    esp_log_level_set("BT_BTM", ESP_LOG_NONE);
 
     const uint8_t *mac = esp_bt_dev_get_address();
     ESP_LOGI(TAG, "ESP32 BT MAC: %02X:%02X:%02X:%02X:%02X:%02X",
              mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 
     /* ── Semaphores ── */
-    g_l2cap_sem    = xSemaphoreCreateBinary();
+    g_l2cap_sem = xSemaphoreCreateBinary();
     g_acl_disc_sem = xSemaphoreCreateBinary();
     if (g_l2cap_sem == NULL || g_acl_disc_sem == NULL)
     {
@@ -410,9 +538,14 @@ void app_main(void)
     ESP_ERROR_CHECK(esp_console_init(&con_cfg));
 
     ESP_LOGI(TAG, "BT ready. Entering menu...");
-    vTaskDelay(pdMS_TO_TICKS(200)); /* brief pause so log flushes */
+    vTaskDelay(pdMS_TO_TICKS(200));
+
+    /* ── Spawn the input task (sets global flags from keystrokes) ── */
+    xTaskCreate(input_task, "input", 2048, NULL, 1, NULL);
+
+    /* ── Init ESP‑NOW mesh ── */
+    espnow_init();
 
     /* ── Hand off to the Bruce-style menu — never returns ── */
-    espnow_init();
     menu_run_main();
 }
