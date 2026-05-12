@@ -45,6 +45,7 @@ static volatile bool g_ble_scan_stop_pending = false;
 static volatile bool g_ble_scanning = false;
 static volatile bool g_show_table = true;
 static uint32_t g_scan_cycle_count = 0;
+static volatile bool g_ble_active_scan = true; // true = active (names/UUIDs), false = passive (stealth)
 
 /* Attack ESP32 peer MAC — shared by espnow_init() and send_device_over_espnow() */
 static const uint8_t s_attack_mac[6] = PEER_ATTACK_MAC;
@@ -399,7 +400,6 @@ static void send_device_over_espnow(device_entry_t *entry)
 static void log_ble_scan_result(esp_ble_gap_cb_param_t *param)
 {
     char bda_str[18];
-    uint16_t adv_len = param->scan_rst.adv_data_len + param->scan_rst.scan_rsp_len;
     uint8_t name_len = 0;
     uint8_t *name_ptr = NULL;
     device_entry_t *entry = find_or_create_device(param->scan_rst.bda);
@@ -413,12 +413,37 @@ static void log_ble_scan_result(esp_ble_gap_cb_param_t *param)
 
     bool is_new = entry->last_seen_ms == 0;
 
-    name_ptr = esp_ble_resolve_adv_data_by_type(param->scan_rst.ble_adv, adv_len,
-                                                ESP_BLE_AD_TYPE_NAME_CMPL, &name_len);
+    /* ── Resolve device name ─────────────────────────────────────────────
+     * The advertising data and scan response are stored in one contiguous
+     * buffer (ble_adv).  The scan response starts at offset adv_data_len.
+     * Search the advertising portion first, then the scan response.
+     * ─────────────────────────────────────────────────────────────────── */
+    name_ptr = esp_ble_resolve_adv_data_by_type(
+        param->scan_rst.ble_adv,
+        param->scan_rst.adv_data_len,
+        ESP_BLE_AD_TYPE_NAME_CMPL, &name_len);
     if (!name_ptr)
     {
-        name_ptr = esp_ble_resolve_adv_data_by_type(param->scan_rst.ble_adv, adv_len,
-                                                    ESP_BLE_AD_TYPE_NAME_SHORT, &name_len);
+        name_ptr = esp_ble_resolve_adv_data_by_type(
+            param->scan_rst.ble_adv,
+            param->scan_rst.adv_data_len,
+            ESP_BLE_AD_TYPE_NAME_SHORT, &name_len);
+    }
+    if (!name_ptr)
+    {
+        uint8_t *scan_rsp = param->scan_rst.ble_adv + param->scan_rst.adv_data_len;
+        name_ptr = esp_ble_resolve_adv_data_by_type(
+            scan_rsp,
+            param->scan_rst.scan_rsp_len,
+            ESP_BLE_AD_TYPE_NAME_CMPL, &name_len);
+    }
+    if (!name_ptr)
+    {
+        uint8_t *scan_rsp = param->scan_rst.ble_adv + param->scan_rst.adv_data_len;
+        name_ptr = esp_ble_resolve_adv_data_by_type(
+            scan_rsp,
+            param->scan_rst.scan_rsp_len,
+            ESP_BLE_AD_TYPE_NAME_SHORT, &name_len);
     }
 
     if (name_ptr && name_len > 0)
@@ -440,9 +465,16 @@ static void log_ble_scan_result(esp_ble_gap_cb_param_t *param)
                  bda2str(param->scan_rst.bda, bda_str, sizeof(bda_str)),
                  (int)entry->rssi,
                  entry->bdname_len > 0 ? (char *)entry->bdname : "(unknown)");
+
+        /* ── Log service UUIDs ──────────────────────────────────────────
+         * Search both parts of the contiguous buffer.
+         * ─────────────────────────────────────────────────────────────── */
         if (is_new)
         {
-            log_ble_service_uuids(param->scan_rst.ble_adv, adv_len);
+            log_ble_service_uuids(param->scan_rst.ble_adv,
+                                  param->scan_rst.adv_data_len);
+            log_ble_service_uuids(param->scan_rst.ble_adv + param->scan_rst.adv_data_len,
+                                  param->scan_rst.scan_rsp_len);
         }
     }
 
@@ -716,6 +748,34 @@ static void bt_app_gap_start_up(void)
     classic_scan_start();
 }
 
+static void ble_set_scan_type(bool active)
+{
+    g_ble_active_scan = active;
+    g_ble_scan_params_ready = false;
+
+    // Stop any running scan
+    if (g_ble_scanning)
+    {
+        esp_ble_gap_stop_scanning();
+        // Wait for stop to complete — a small delay is sufficient
+        vTaskDelay(pdMS_TO_TICKS(200));
+    }
+
+    // Update the parameter
+    ble_scan_params.scan_type = active ? BLE_SCAN_TYPE_ACTIVE : BLE_SCAN_TYPE_PASSIVE;
+
+    // Re‑register and start
+    esp_err_t ret = esp_ble_gap_set_scan_params(&ble_scan_params);
+    if (ret == ESP_OK)
+    {
+        g_ble_scan_params_ready = true;
+        if (g_scan_enabled)
+        {
+            ble_scan_start();
+        }
+    }
+}
+
 static void ble_app_gap_start_up(void)
 {
     esp_err_t ret = esp_ble_gap_register_callback(ble_gap_cb);
@@ -756,12 +816,13 @@ static void dashboard_task(void *arg)
             /* ── Build header — box_width is derived from its length ── */
             char header[128];
             snprintf(header, sizeof(header),
-                     "Scan #%-5" PRIu32 "  %-*s  %-*s  %-*s  %-*s  Name",
+                     "Scan #%-5" PRIu32 "  %-*s  %-*s  %*s  %*s  %s",
                      g_scan_cycle_count,
                      COL_MAC, "MAC",
                      COL_TYPE, "Type",
                      COL_RSSI, "RSSI",
-                     COL_AGE, "Last Seen (s)");
+                     COL_AGE, "Last Seen (s)",
+                     "Name");
 
             int content_width = (int)strlen(header);
             /* box_width = content + 1-space pad on each side */
@@ -775,6 +836,10 @@ static void dashboard_task(void *arg)
             for (int i = 0; i < box_width; i++)
                 printf("─");
             printf("┐\n");
+
+            /* ── Active/passive mode indicator ── */
+            printf("│ %-*s │\n", content_width,
+                   g_ble_active_scan ? "Mode: ACTIVE (names/UUIDs)" : "Mode: PASSIVE (stealth)");
 
             /* ── Header row ── */
             printf("│ %s │\n", header);
@@ -854,7 +919,7 @@ static void dashboard_task(void *arg)
 
             /* ── Footer ── */
             printf("│ %-*s │\n", content_width,
-                   "[Commands: table on | table off | start | stop]");
+                   "[table on|off] [start|stop] [active|passive]");
 
             /* ── Bottom border ── */
             printf("└");
@@ -897,6 +962,42 @@ static void scan_control_task(void *arg)
                 classic_scan_start();
                 ble_scan_start();
                 printf("Scan started.\n");
+            }
+            else if (strncmp(buf, "active", 6) == 0)
+            {
+                ble_set_scan_type(true);
+                printf("BLE scan: ACTIVE  (requests names & UUIDs — visible)\n");
+            }
+            else if (strncmp(buf, "passive", 7) == 0)
+            {
+                ble_set_scan_type(false);
+                printf("BLE scan: PASSIVE (listen‑only — stealth)\n");
+            }
+            else if (buf[0] != '\n' && buf[0] != '\r' && buf[0] != '\0')
+            {
+                bool was_showing = g_show_table;
+                g_show_table = false;
+
+                printf("\nUnknown command: %s\n", buf);
+                printf("Available commands:\n");
+                printf("  start           - start scanning\n");
+                printf("  stop            - stop scanning\n");
+                printf("  table on        - show table view (paginated)\n");
+                printf("  table off       - show raw log view (no pagination)\n");
+                printf("  active          - active BLE scan (requests names/UUIDs)\n");
+                printf("  passive         - passive BLE scan (listen-only)\n");
+                printf("\nPress Enter to return to dashboard...\n");
+
+                /* Consume a whole line — safe for arrow keys and other
+                 * multi‑byte sequences that would otherwise corrupt the
+                 * next fgets() read. */
+                char dummy[8];
+                fgets(dummy, sizeof(dummy), stdin);
+
+                if (was_showing)
+                {
+                    g_show_table = true;
+                }
             }
         }
         vTaskDelay(pdMS_TO_TICKS(100));
