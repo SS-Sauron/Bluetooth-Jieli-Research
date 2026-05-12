@@ -1,6 +1,6 @@
 /*
  * AVRCP Runtime Command Console — Bruce-style Menu Edition
- * Target: Soundcore R50i NC (default F4:B6:2D:AE:AB:E0)
+ * Target: user-selected Bluetooth AVRCP device
  *
  * This file owns the Bluetooth initialisation and shared state.
  * All user interaction is handled by menu.c (loop_options pattern).
@@ -43,9 +43,11 @@
 
 #define TAG "AVRCP"
 
-/* ── Default target earbuds — non-const, required by L2CAP API ──────── */
+/* ── Runtime target address — non-const, required by L2CAP API ──────── */
+/* No default target is set. Pick one from Device List or, in a future
+ * command, set it with: default XX:XX:XX:XX:XX:XX. */
 esp_bd_addr_t g_target_addr = {
-    0xF4, 0xB6, 0x2D, 0xAE, 0xAB, 0xE0};
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
 /* ── Global L2CAP state ──────────────────────────────────────────────── */
 SemaphoreHandle_t g_l2cap_sem = NULL;

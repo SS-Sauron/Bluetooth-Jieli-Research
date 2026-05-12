@@ -67,6 +67,11 @@ uint8_t g_remote_device_count = 0;
 /* ── Selected device index for action_select_device() ───────────────── */
 static int g_selected_device_index = -1;
 
+/* ── Tracks whether target was just picked from Device List ────────────
+ * When true, action_connect() skips the prompt and connects immediately.
+ * Cleared after one use. ────────────────────────────────────────────── */
+static bool g_target_just_selected = false;
+
 /* ── External helpers from main.c ───────────────────────────────────── */
 extern char *bda2str(esp_bd_addr_t bda, char *str, size_t size);
 
@@ -336,6 +341,36 @@ static void action_connect(void)
         return;
     }
 
+    /* ── Fast path: user just picked a device from the Device List ──────
+     * Skip the MAC prompt entirely and connect to g_target_addr now.
+     * ─────────────────────────────────────────────────────────────────── */
+    if (g_target_just_selected)
+    {
+        g_target_just_selected = false;
+
+        printf("\n  Connecting to selected target "
+               "%02x:%02x:%02x:%02x:%02x:%02x ...\n",
+               g_target_addr[0], g_target_addr[1], g_target_addr[2],
+               g_target_addr[3], g_target_addr[4], g_target_addr[5]);
+        fflush(stdout);
+
+        const char *err_str = NULL;
+        esp_err_t ret = do_connect(g_target_addr, &err_str);
+        if (ret == ESP_OK)
+        {
+            printf(A_GREEN "  Connected.\n" A_RST);
+            vTaskDelay(pdMS_TO_TICKS(1000));
+        }
+        else
+        {
+            printf(A_RED "  Failed: %s (0x%x)\n" A_RST,
+                   err_str ? err_str : "unknown", ret);
+            vTaskDelay(pdMS_TO_TICKS(2000));
+        }
+        return;
+    }
+
+    /* ── Normal path: prompt for MAC ─────────────────────────────────── */
     char buf[32];
     printf("\n  Target MAC [%02x:%02x:%02x:%02x:%02x:%02x],"
            " Enter for default: ",
@@ -358,6 +393,21 @@ static void action_connect(void)
     }
     else
     {
+        bool target_set = false;
+        for (size_t i = 0; i < sizeof(g_target_addr); i++)
+        {
+            if (g_target_addr[i] != 0)
+            {
+                target_set = true;
+                break;
+            }
+        }
+        if (!target_set)
+        {
+            printf("  No target set. Use Device List to select a device.\n");
+            vTaskDelay(pdMS_TO_TICKS(2000));
+            return;
+        }
         memcpy(addr, g_target_addr, sizeof(esp_bd_addr_t));
     }
 
@@ -534,6 +584,7 @@ static void action_select_device(void)
     }
 
     memcpy(g_target_addr, g_remote_devices[idx].bda, sizeof(esp_bd_addr_t));
+    g_target_just_selected = true;
 
     printf("\n" A_GREEN "  Target set: %02x:%02x:%02x:%02x:%02x:%02x  %s\n" A_RST,
            g_target_addr[0], g_target_addr[1], g_target_addr[2],
