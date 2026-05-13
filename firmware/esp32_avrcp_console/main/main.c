@@ -45,8 +45,8 @@
 #define TAG "AVRCP"
 
 #define STATUS_LED_GPIO GPIO_NUM_2
-#define STATUS_LED_ON_LEVEL 0
-#define STATUS_LED_OFF_LEVEL 1
+#define STATUS_LED_ON_LEVEL 1
+#define STATUS_LED_OFF_LEVEL 0
 
 /* ── Runtime target address — non-const, required by L2CAP API ──────── */
 /* No default target is set. Pick one from Device List or, in a future
