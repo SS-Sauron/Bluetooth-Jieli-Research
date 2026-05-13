@@ -61,7 +61,7 @@ static uint32_t g_scan_cycle_count = 0;
 static volatile bool g_ble_active_scan = true; // true = active (names/UUIDs), false = passive (stealth)
 static volatile bool g_new_device_blink_pending = false;
 
-/* Attack ESP32 peer MAC — shared by espnow_init() and send_device_over_espnow() */
+/* Attack ESP32 peer MAC - shared by espnow_init() and send_device_over_espnow() */
 static const uint8_t s_attack_mac[6] = PEER_ATTACK_MAC;
 
 static esp_ble_scan_params_t ble_scan_params = {
@@ -490,7 +490,7 @@ static void log_ble_service_uuids(uint8_t *adv_data, uint16_t adv_len)
 /* ── ESP-NOW helpers ────────────────────────────────────────────────────── */
 
 /*
- * send_device_over_espnow() — pack a device_entry_t into a command_t and
+ * send_device_over_espnow() - pack a device_entry_t into a command_t and
  * fire it over ESP-NOW to the attack ESP32.  Fire-and-forget: errors are
  * logged but do not affect the scan loop.
  */
@@ -504,7 +504,7 @@ static void send_device_over_espnow(device_entry_t *entry)
     /* BD_ADDR */
     memcpy(cmd.payload.device.bda, entry->bda, sizeof(cmd.payload.device.bda));
 
-    /* Name — device_info_t.name is char[32]; bdname is uint8_t[] */
+    /* Name - device_info_t.name is char[32]; bdname is uint8_t[] */
     size_t name_len = entry->bdname_len < (sizeof(cmd.payload.device.name) - 1)
                           ? entry->bdname_len
                           : sizeof(cmd.payload.device.name) - 1;
@@ -910,7 +910,7 @@ static void ble_set_scan_type(bool active)
     if (g_ble_scanning)
     {
         esp_ble_gap_stop_scanning();
-        // Wait for stop to complete — a small delay is sufficient
+        // Wait for stop to complete - a small delay is sufficient
         vTaskDelay(pdMS_TO_TICKS(200));
     }
 
@@ -950,15 +950,16 @@ static void dashboard_task(void *arg)
     (void)arg;
     char bda_str[18];
 
-    /* Column widths — single source of truth for header and device rows.
-     * Change a value here and both the header label and the data column
-     * automatically resize together.                                    */
-    const int COL_MAC = 14;
-    const int COL_TYPE = 7;
+    /* Fixed-width columns */
+    const int COL_MAC    = 17;
+    const int COL_TYPE   = 7;
     const int COL_VENDOR = 10;
-    const int COL_COD = 8;
-    const int COL_RSSI = 5;
-    const int COL_AGE = 10;
+    const int COL_COD    = 8;
+    const int COL_RSSI   = 5;
+    const int COL_AGE    = 10;
+    
+    /* Maximum allowed expansion for the Name column to prevent terminal wrapping */
+    const int MAX_NAME_LIMIT = 30;
 
     while (1)
     {
@@ -968,55 +969,74 @@ static void dashboard_task(void *arg)
             uint32_t displayed_rows = 0;
             uint32_t hidden_rows = 0;
 
-            /* ── Build header — box_width is derived from its length ── */
-            char header[128];
-            snprintf(header, sizeof(header),
-                     "#%-3" PRIu32 "  %-*s  %-*s  %-*s  %-*s  %*s  %*s  %s",
-                     g_scan_cycle_count,
-                     COL_MAC, "MAC",
-                     COL_TYPE, "Type",
-                     COL_VENDOR, "Vendor",
-                     COL_COD, "Class",
-                     COL_RSSI, "RSSI",
-                     COL_AGE, "Last Seen",
-                     "Name");
-
-            int content_width = (int)strlen(header);
-            /* box_width = content + 1-space pad on each side */
-            int box_width = content_width + 2;
-
-            /* ── Clear screen and scrollback ── */
-            printf("\033[2J\033[3J\033[H");
-
-            /* ── Top border ── */
-            printf("┌");
-            for (int i = 0; i < box_width; i++)
-                printf("─");
-            printf("┐\n");
-
-            /* ── Active/passive mode indicator ── */
-            printf("│ %-*s │\n", content_width,
-                   g_ble_active_scan ? "Mode: ACTIVE (names/UUIDs)" : "Mode: PASSIVE (stealth)");
-
-            /* ── Header row ── */
-            printf("│ %s │\n", header);
-
-            /* ── Header / data divider ── */
-            printf("├");
-            for (int i = 0; i < box_width; i++)
-                printf("─");
-            printf("┤\n");
-
-            /* ── Device rows ── */
+            /* 1. Calculate Dynamic Column Width for "Name" */
+            int COL_NAME = 4; // Start with width of header "Name"
+            
             for (int i = 0; i < MAX_TRACKED_DEVICES; i++)
             {
                 device_entry_t *entry = &g_devices[i];
-                if (!entry->in_use)
-                    continue;
+                if (!entry->in_use) continue;
+
+                // Only consider devices seen within the last 2 minutes
+                if ((now_ms - entry->last_seen_ms) < 120000) 
+                {
+                    int name_len = (entry->bdname_len > 0) ? (int)strlen((char *)entry->bdname) : 9; // 9 for "(unknown)"
+                    if (name_len > COL_NAME) {
+                        COL_NAME = name_len;
+                    }
+                }
+            }
+
+            // Apply the cap to ensure the box doesn't exceed screen width
+            if (COL_NAME > MAX_NAME_LIMIT) {
+                COL_NAME = MAX_NAME_LIMIT;
+            }
+
+            /* 2. Build the Header based on dynamic width */
+            char header[256]; 
+            snprintf(header, sizeof(header),
+                     "%-*s %-*s %-*s %-*s %*s %*s %-*s",
+                     COL_MAC,    "MAC",
+                     COL_TYPE,   "Type",
+                     COL_VENDOR, "Vendor",
+                     COL_COD,    "Class",
+                     COL_RSSI,   "RSSI",
+                     COL_AGE,    "Last Seen",
+                     COL_NAME,   "Name");
+
+            int content_width = (int)strlen(header);
+            int box_width = content_width + 2;
+
+            /* 3. Render Screen */
+            printf("\033[2J\033[3J\033[H");
+
+            // Top border
+            printf("┌");
+            for (int i = 0; i < box_width; i++) printf("─");
+            printf("┐\n");
+
+            // Scan indicator
+            printf("│ Scan #%-3" PRIu32 " - %-*s │\n",
+                   g_scan_cycle_count,
+                   content_width - 12,
+                   g_ble_active_scan ? "ACTIVE (names/UUIDs)" : "PASSIVE (stealth)");
+
+            // Header row
+            printf("│ %s │\n", header);
+
+            // Divider
+            printf("├");
+            for (int i = 0; i < box_width; i++) printf("─");
+            printf("┤\n");
+
+            /* 4. Device rows */
+            for (int i = 0; i < MAX_TRACKED_DEVICES; i++)
+            {
+                device_entry_t *entry = &g_devices[i];
+                if (!entry->in_use) continue;
 
                 uint32_t age_ms = now_ms - entry->last_seen_ms;
-                if (age_ms >= 120000)
-                    continue;
+                if (age_ms >= 120000) continue;
 
                 if (displayed_rows >= MAX_DISPLAY_ROWS)
                 {
@@ -1024,68 +1044,47 @@ static void dashboard_task(void *arg)
                     continue;
                 }
 
-                /* Determine row colour and device type string */
                 bool is_classic = entry->type == 0;
                 const char *type = is_classic ? "Classic" : "BLE";
                 const char *row_color = is_classic ? A_GREEN : A_CYAN;
 
-                /* Device name — fallback to "(unknown)" if none available */
-                const char *name = entry->bdname_len > 0
-                                       ? (char *)entry->bdname
-                                       : "(unknown)";
+                const char *name = entry->bdname_len > 0 
+                                   ? (char *)entry->bdname 
+                                   : "(unknown)";
 
-                /* Format age as "Xs" string so %*s can right-align it */
                 char age_str[16];
                 snprintf(age_str, sizeof(age_str), "%" PRIu32 "s", age_ms / 1000);
 
-                /* Format CoD as raw hex for Classic, "BLE" for BLE devices */
                 char class_str[16];
-                if (entry->cod != 0)
-                {
+                if (entry->cod != 0) {
                     snprintf(class_str, sizeof(class_str), "0x%06" PRIx32, entry->cod);
-                }
-                else
-                {
+                } else {
                     snprintf(class_str, sizeof(class_str), "BLE");
                 }
 
-                /* ── Total width consumed by all fixed columns + separators ───
-                 * The data rows use "  " (two spaces) between every column.
-                 * COL_MAC + 2 + COL_TYPE + 2 + COL_VENDOR + 2 + COL_COD
-                 *   + 2 + COL_RSSI + 2 + COL_AGE = 64 characters.
-                 * The Name column gets whatever space remains inside the box.  */
-                const int fixed_cols_width = COL_MAC + 2 + COL_TYPE + 2 +
-                                             COL_VENDOR + 2 + COL_COD + 2 +
-                                             COL_RSSI + 2 + COL_AGE;
-
-                int name_max = content_width - fixed_cols_width - 1;
-                if (name_max < 4)
-                    name_max = 4; /* safety floor */
-
-                /* Print the row directly — no intermediate buffer.
-                 * Columns mirror the header format exactly.  The closing │
-                 * ensures the right border is always visible.            */
-                printf("%s│ %-*s  %-*s  %-*s  %-*s  %*d  %*s  %-.*s │" A_RST "\n",
+                /* 
+                 * The fix: using %-*.*s 
+                 * This provides both minimum padding and maximum truncation.
+                 */
+                printf("%s│ %-*s %-*s %-*.*s %-*s %*d %*s %-*.*s │" A_RST "\n",
                        row_color,
-                       COL_MAC, bda2str(entry->bda, bda_str, sizeof(bda_str)),
-                       COL_TYPE, type,
-                       COL_VENDOR, entry->vendor,
-                       COL_COD, class_str,
-                       COL_RSSI, (int)entry->rssi,
-                       COL_AGE, age_str,
-                       name_max, name);
+                       COL_MAC,    bda2str(entry->bda, bda_str, sizeof(bda_str)),
+                       COL_TYPE,   type,
+                       COL_VENDOR, COL_VENDOR, entry->vendor, // Truncate Vendor if too long
+                       COL_COD,    class_str,
+                       COL_RSSI,   (int)entry->rssi,
+                       COL_AGE,    age_str,
+                       COL_NAME,   COL_NAME, name);           // Truncate Name to dynamic limit
+                
                 displayed_rows++;
             }
 
-            /* ── Empty-state row ── */
-            if (displayed_rows == 0)
-            {
+            /* 5. Empty-state & Footer */
+            if (displayed_rows == 0) {
                 printf("│ %-*s │\n", content_width, "(no devices in range)");
             }
 
-            /* ── Hidden-rows notice (sits between data and footer) ── */
-            if (hidden_rows > 0)
-            {
+            if (hidden_rows > 0) {
                 char hidden_msg[128];
                 snprintf(hidden_msg, sizeof(hidden_msg),
                          "... and %" PRIu32 " more device(s) - type 'table off' for full list.",
@@ -1093,20 +1092,15 @@ static void dashboard_task(void *arg)
                 printf("│ %-*s │\n", content_width, hidden_msg);
             }
 
-            /* ── Footer divider ── */
             printf("├");
-            for (int i = 0; i < box_width; i++)
-                printf("─");
+            for (int i = 0; i < box_width; i++) printf("─");
             printf("┤\n");
 
-            /* ── Footer ── */
             printf("│ %-*s │\n", content_width,
                    "[table on|off] [start|stop] [active|passive]");
 
-            /* ── Bottom border ── */
             printf("└");
-            for (int i = 0; i < box_width; i++)
-                printf("─");
+            for (int i = 0; i < box_width; i++) printf("─");
             printf("┘\n");
         }
 
@@ -1148,12 +1142,12 @@ static void scan_control_task(void *arg)
             else if (strncmp(buf, "active", 6) == 0)
             {
                 ble_set_scan_type(true);
-                printf("BLE scan: ACTIVE  (requests names & UUIDs — visible)\n");
+                printf("BLE scan: ACTIVE  (requests names & UUIDs - visible)\n");
             }
             else if (strncmp(buf, "passive", 7) == 0)
             {
                 ble_set_scan_type(false);
-                printf("BLE scan: PASSIVE (listen‑only — stealth)\n");
+                printf("BLE scan: PASSIVE (listen‑only - stealth)\n");
             }
             else if (buf[0] != '\n' && buf[0] != '\r' && buf[0] != '\0')
             {
@@ -1170,7 +1164,7 @@ static void scan_control_task(void *arg)
                 printf("  passive         - passive BLE scan (listen-only)\n");
                 printf("\nPress Enter to return to dashboard...\n");
 
-                /* Consume a whole line — safe for arrow keys and other
+                /* Consume a whole line - safe for arrow keys and other
                  * multi‑byte sequences that would otherwise corrupt the
                  * next fgets() read. */
                 char dummy[8];
@@ -1189,7 +1183,7 @@ static void scan_control_task(void *arg)
 /* ── ESP-NOW initialisation ─────────────────────────────────────────────── */
 
 /*
- * espnow_send_cb() — fire-and-forget send callback.
+ * espnow_send_cb() - fire-and-forget send callback.
  * Errors are visible in the log from send_device_over_espnow(); no
  * additional action is required here.
  */
@@ -1203,7 +1197,7 @@ static void espnow_send_cb(const esp_now_send_info_t *tx_info, esp_now_send_stat
 }
 
 /*
- * espnow_init() — bring up Wi-Fi STA + ESP-NOW and register the attack
+ * espnow_init() - bring up Wi-Fi STA + ESP-NOW and register the attack
  * ESP32 as the sole peer.  Called once from app_main() after Bluetooth
  * init completes.  The ESP32 supports BT+Wi-Fi coexistence natively.
  *
@@ -1218,7 +1212,7 @@ static void espnow_init(void)
     esp_err_t ret = esp_event_loop_create_default();
     if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE)
     {
-        /* ESP_ERR_INVALID_STATE means the loop already exists — that is fine */
+        /* ESP_ERR_INVALID_STATE means the loop already exists - that is fine */
         ESP_ERROR_CHECK(ret);
     }
 
@@ -1255,7 +1249,7 @@ static void espnow_init(void)
 void app_main(void)
 {
     char bda_str[18] = {0};
-    /* Initialize NVS — it is used to store PHY calibration data and save key-value pairs in flash memory*/
+    /* Initialize NVS - it is used to store PHY calibration data and save key-value pairs in flash memory*/
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
     {
