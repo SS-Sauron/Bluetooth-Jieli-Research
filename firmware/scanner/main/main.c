@@ -953,12 +953,12 @@ static void dashboard_task(void *arg)
     /* Column widths — single source of truth for header and device rows.
      * Change a value here and both the header label and the data column
      * automatically resize together.                                    */
-    const int COL_MAC    = 14;
-    const int COL_TYPE   =  7;
+    const int COL_MAC = 14;
+    const int COL_TYPE = 7;
     const int COL_VENDOR = 10;
-    const int COL_COD    =  8;
-    const int COL_RSSI   =  5;
-    const int COL_AGE    = 10;
+    const int COL_COD = 8;
+    const int COL_RSSI = 5;
+    const int COL_AGE = 10;
 
     while (1)
     {
@@ -973,12 +973,12 @@ static void dashboard_task(void *arg)
             snprintf(header, sizeof(header),
                      "#%-3" PRIu32 "  %-*s  %-*s  %-*s  %-*s  %*s  %*s  %s",
                      g_scan_cycle_count,
-                     COL_MAC,    "MAC",
-                     COL_TYPE,   "Type",
+                     COL_MAC, "MAC",
+                     COL_TYPE, "Type",
                      COL_VENDOR, "Vendor",
-                     COL_COD,    "Class",
-                     COL_RSSI,   "RSSI",
-                     COL_AGE,    "Last Seen",
+                     COL_COD, "Class",
+                     COL_RSSI, "RSSI",
+                     COL_AGE, "Last Seen",
                      "Name");
 
             int content_width = (int)strlen(header);
@@ -1024,18 +1024,12 @@ static void dashboard_task(void *arg)
                     continue;
                 }
 
-                char class_str[11];
+                /* Determine row colour and device type string */
                 bool is_classic = entry->type == 0;
                 const char *type = is_classic ? "Classic" : "BLE";
                 const char *row_color = is_classic ? A_GREEN : A_CYAN;
-                if (entry->cod != 0)
-                {
-                    snprintf(class_str, sizeof(class_str), "0x%06" PRIx32, entry->cod);
-                }
-                else
-                {
-                    snprintf(class_str, sizeof(class_str), "BLE");
-                }
+
+                /* Device name — fallback to "(unknown)" if none available */
                 const char *name = entry->bdname_len > 0
                                        ? (char *)entry->bdname
                                        : "(unknown)";
@@ -1044,31 +1038,42 @@ static void dashboard_task(void *arg)
                 char age_str[16];
                 snprintf(age_str, sizeof(age_str), "%" PRIu32 "s", age_ms / 1000);
 
-                /* Format CoD as raw hex for Classic, "BLE" for BLE */
+                /* Format CoD as raw hex for Classic, "BLE" for BLE devices */
                 char class_str[16];
-                if (entry->cod != 0) {
+                if (entry->cod != 0)
+                {
                     snprintf(class_str, sizeof(class_str), "0x%06" PRIx32, entry->cod);
-                } else {
+                }
+                else
+                {
                     snprintf(class_str, sizeof(class_str), "BLE");
                 }
 
-                char row[320];
-                snprintf(row, sizeof(row),
-                         "%-*s  %-*s  %-*s  %-*s  %*d  %*s  %s",
-                         COL_MAC,    bda2str(entry->bda, bda_str, sizeof(bda_str)),
-                         COL_TYPE,   type,
-                         COL_VENDOR, entry->vendor,
-                         COL_COD,    class_str,
-                         COL_RSSI,   (int)entry->rssi,
-                         COL_AGE,    age_str,
-                         name);
+                /* ── Total width consumed by all fixed columns + separators ───
+                 * The data rows use "  " (two spaces) between every column.
+                 * COL_MAC + 2 + COL_TYPE + 2 + COL_VENDOR + 2 + COL_COD
+                 *   + 2 + COL_RSSI + 2 + COL_AGE = 64 characters.
+                 * The Name column gets whatever space remains inside the box.  */
+                const int fixed_cols_width = COL_MAC + 2 + COL_TYPE + 2 +
+                                             COL_VENDOR + 2 + COL_COD + 2 +
+                                             COL_RSSI + 2 + COL_AGE;
 
-                /* Truncate at content_width so a long name cannot break
-                 * the right border.                                     */
-                if ((int)strlen(row) > content_width)
-                    row[content_width] = '\0';
+                int name_max = content_width - fixed_cols_width - 1;
+                if (name_max < 4)
+                    name_max = 4; /* safety floor */
 
-                printf("%s│ %-*s │" A_RST "\n", row_color, content_width, row);
+                /* Print the row directly — no intermediate buffer.
+                 * Columns mirror the header format exactly.  The closing │
+                 * ensures the right border is always visible.            */
+                printf("%s│ %-*s  %-*s  %-*s  %-*s  %*d  %*s  %-.*s │" A_RST "\n",
+                       row_color,
+                       COL_MAC, bda2str(entry->bda, bda_str, sizeof(bda_str)),
+                       COL_TYPE, type,
+                       COL_VENDOR, entry->vendor,
+                       COL_COD, class_str,
+                       COL_RSSI, (int)entry->rssi,
+                       COL_AGE, age_str,
+                       name_max, name);
                 displayed_rows++;
             }
 
