@@ -239,6 +239,7 @@ static void scan_led_task(void *arg)
         if (!g_scan_enabled)
         {
             g_new_device_blink_pending = false;
+            /* GPIO 2 board LED is off at level 1; keep it dark while stopped. */
             scan_led_set(false);
             vTaskDelay(pdMS_TO_TICKS(100));
             continue;
@@ -328,38 +329,6 @@ static void update_ble_metadata(device_entry_t *entry,
     if (data)
     {
         entry->company_id = (uint16_t)data[0] | ((uint16_t)data[1] << 8);
-    }
-}
-
-static const char *cod_major_label(uint32_t cod)
-{
-    if (!esp_bt_gap_is_valid_cod(cod))
-    {
-        return "Unknown";
-    }
-
-    switch (esp_bt_gap_get_cod_major_dev(cod))
-    {
-    case 0x0100:
-        return "Computer";
-    case 0x0200:
-        return "Phone";
-    case 0x0300:
-        return "LAN";
-    case 0x0400:
-        return "Audio";
-    case 0x0500:
-        return "Peripheral";
-    case 0x0600:
-        return "Imaging";
-    case 0x0700:
-        return "Wearable";
-    case 0x0800:
-        return "Toy";
-    case 0x0900:
-        return "Health";
-    default:
-        return "Unknown";
     }
 }
 
@@ -551,9 +520,12 @@ static void send_device_over_espnow(device_entry_t *entry)
     if (ret == ESP_OK)
     {
 #if SCANNER_DEBUG
-        ESP_LOGI(TAG, "ESP-NOW sent device %02x:%02x:%02x:%02x:%02x:%02x",
-                 entry->bda[0], entry->bda[1], entry->bda[2],
-                 entry->bda[3], entry->bda[4], entry->bda[5]);
+        if (!g_show_table)
+        {
+            ESP_LOGI(TAG, "ESP-NOW sent device %02x:%02x:%02x:%02x:%02x:%02x",
+                     entry->bda[0], entry->bda[1], entry->bda[2],
+                     entry->bda[3], entry->bda[4], entry->bda[5]);
+        }
 #endif
     }
     else
@@ -999,7 +971,7 @@ static void dashboard_task(void *arg)
                      g_scan_cycle_count,
                      COL_MAC, "MAC",
                      COL_TYPE, "Type",
-                     COL_CLASS, "Class",
+                     COL_CLASS, "CoD",
                      COL_RSSI, "RSSI",
                      COL_AGE, "Last Seen (s)",
                      "Name");
@@ -1047,10 +1019,18 @@ static void dashboard_task(void *arg)
                     continue;
                 }
 
+                char class_str[11];
                 bool is_classic = entry->type == 0;
                 const char *type = is_classic ? "Classic" : "BLE";
                 const char *row_color = is_classic ? A_GREEN : A_CYAN;
-                const char *class_label = is_classic ? cod_major_label(entry->cod) : "BLE";
+                if (entry->cod != 0)
+                {
+                    snprintf(class_str, sizeof(class_str), "0x%06" PRIx32, entry->cod);
+                }
+                else
+                {
+                    snprintf(class_str, sizeof(class_str), "BLE");
+                }
                 const char *name = entry->bdname_len > 0
                                        ? (char *)entry->bdname
                                        : "(unknown)";
@@ -1065,7 +1045,7 @@ static void dashboard_task(void *arg)
                          "%-*s  %-*s  %-*s  %*d  %*s  %s",
                          COL_MAC, bda2str(entry->bda, bda_str, sizeof(bda_str)),
                          COL_TYPE, type,
-                         COL_CLASS, class_label,
+                         COL_CLASS, class_str,
                          COL_RSSI, (int)entry->rssi,
                          COL_AGE, age_str,
                          name);
@@ -1198,7 +1178,7 @@ static void scan_control_task(void *arg)
 static void espnow_send_cb(const esp_now_send_info_t *tx_info, esp_now_send_status_t status)
 {
     (void)tx_info;
-    if (status != ESP_NOW_SEND_SUCCESS)
+    if (status != ESP_NOW_SEND_SUCCESS && !g_show_table)
     {
         ESP_LOGW(TAG, "ESP-NOW send callback: delivery failed");
     }
