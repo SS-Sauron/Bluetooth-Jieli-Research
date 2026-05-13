@@ -30,11 +30,20 @@
 #include "esp_wifi.h"
 #include "esp_now.h"
 #include "espnow_proto.h"
+#include "driver/gpio.h"
 
 #define GAP_TAG "GAP"
 #define MAX_TRACKED_DEVICES 64
 #define MAX_DISPLAY_ROWS 12
 #define SCANNER_DEBUG 1
+
+#define A_RST "\033[0m"
+#define A_CYAN "\033[36m"
+#define A_GREEN "\033[32m"
+
+#define SCAN_LED_GPIO GPIO_NUM_2
+#define SCAN_LED_ON_LEVEL 0
+#define SCAN_LED_OFF_LEVEL 1
 
 static const char *TAG = "BT_SCANNER";
 static volatile bool g_scan_enabled = true; // start scanning at boot
@@ -46,6 +55,7 @@ static volatile bool g_ble_scanning = false;
 static volatile bool g_show_table = true;
 static uint32_t g_scan_cycle_count = 0;
 static volatile bool g_ble_active_scan = true; // true = active (names/UUIDs), false = passive (stealth)
+static volatile bool g_new_device_blink_pending = false;
 
 /* Attack ESP32 peer MAC — shared by espnow_init() and send_device_over_espnow() */
 static const uint8_t s_attack_mac[6] = PEER_ATTACK_MAC;
@@ -178,6 +188,58 @@ static bool get_name_from_eir(uint8_t *eir, uint8_t *bdname, uint8_t *bdname_len
 static inline uint32_t get_now_ms(void)
 {
     return xTaskGetTickCount() * portTICK_PERIOD_MS;
+}
+
+static void scan_led_set(bool on)
+{
+    gpio_set_level(SCAN_LED_GPIO, on ? SCAN_LED_ON_LEVEL : SCAN_LED_OFF_LEVEL);
+}
+
+static void scan_led_init(void)
+{
+    gpio_config_t io_conf = {
+        .pin_bit_mask = (1ULL << SCAN_LED_GPIO),
+        .mode = GPIO_MODE_OUTPUT,
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE,
+    };
+    ESP_ERROR_CHECK(gpio_config(&io_conf));
+    scan_led_set(false);
+}
+
+static void scan_led_task(void *arg)
+{
+    (void)arg;
+
+    while (1)
+    {
+        if (!g_scan_enabled)
+        {
+            g_new_device_blink_pending = false;
+            scan_led_set(false);
+            vTaskDelay(pdMS_TO_TICKS(100));
+            continue;
+        }
+
+        if (g_new_device_blink_pending)
+        {
+            g_new_device_blink_pending = false;
+            for (int i = 0; i < 2 && g_scan_enabled; i++)
+            {
+                scan_led_set(true);
+                vTaskDelay(pdMS_TO_TICKS(100));
+                scan_led_set(false);
+                vTaskDelay(pdMS_TO_TICKS(100));
+            }
+            continue;
+        }
+
+        scan_led_set(true);
+        vTaskDelay(pdMS_TO_TICKS(100));
+        scan_led_set(false);
+        vTaskDelay(pdMS_TO_TICKS(900));
+    }
 }
 
 static void update_entry_name(device_entry_t *entry, const uint8_t *bdname, uint8_t bdname_len)
@@ -478,6 +540,11 @@ static void log_ble_scan_result(esp_ble_gap_cb_param_t *param)
         }
     }
 
+    if (is_new)
+    {
+        g_new_device_blink_pending = true;
+    }
+
     /* Forward device to attack ESP32 over ESP-NOW */
     send_device_over_espnow(entry);
 }
@@ -641,6 +708,11 @@ static void update_device_info(esp_bt_gap_cb_param_t *param)
                  (int)entry->rssi,
                  entry->cod,
                  entry->bdname_len > 0 ? (char *)entry->bdname : "(unknown)");
+    }
+
+    if (is_new)
+    {
+        g_new_device_blink_pending = true;
     }
 
     /* Forward device to attack ESP32 over ESP-NOW */
@@ -868,6 +940,7 @@ static void dashboard_task(void *arg)
                 }
 
                 const char *type = entry->cod != 0 ? "Classic" : "BLE";
+                const char *row_color = entry->cod != 0 ? A_GREEN : A_CYAN;
                 const char *name = entry->bdname_len > 0
                                        ? (char *)entry->bdname
                                        : "(unknown)";
@@ -891,7 +964,7 @@ static void dashboard_task(void *arg)
                 if ((int)strlen(row) > content_width)
                     row[content_width] = '\0';
 
-                printf("│ %-*s │\n", content_width, row);
+                printf("%s│ %-*s │" A_RST "\n", row_color, content_width, row);
                 displayed_rows++;
             }
 
@@ -1081,6 +1154,7 @@ void app_main(void)
         ret = nvs_flash_init();
     }
     ESP_ERROR_CHECK(ret);
+    scan_led_init();
 
     esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
     if ((ret = esp_bt_controller_init(&bt_cfg)) != ESP_OK)
@@ -1121,6 +1195,7 @@ void app_main(void)
     /* Bring up ESP-NOW (Wi-Fi STA + peer registration) */
     espnow_init();
 
+    xTaskCreate(scan_led_task, "scan_led", 1024, NULL, 1, NULL);
     xTaskCreate(scan_control_task, "scan_ctrl", 2048, NULL, 1, NULL);
     xTaskCreate(dashboard_task, "dashboard", 2048, NULL, 1, NULL);
 }

@@ -37,11 +37,16 @@
 #include "esp_wifi.h"
 #include "esp_now.h"
 #include "esp_netif.h"
+#include "driver/gpio.h"
 #include "espnow_proto.h"
 
 #include "menu.h" /* ← pulls in extern declarations + menu_run_main() */
 
 #define TAG "AVRCP"
+
+#define STATUS_LED_GPIO GPIO_NUM_2
+#define STATUS_LED_ON_LEVEL 0
+#define STATUS_LED_OFF_LEVEL 1
 
 /* ── Runtime target address — non-const, required by L2CAP API ──────── */
 /* No default target is set. Pick one from Device List or, in a future
@@ -59,6 +64,25 @@ static QueueHandle_t g_espnow_queue = NULL;
 volatile uint8_t g_avrcp_opcode = 0x41;
 volatile int g_repeats = 0;
 volatile bool g_abort = false;
+
+static void status_led_set(bool connected)
+{
+    gpio_set_level(STATUS_LED_GPIO,
+                   connected ? STATUS_LED_ON_LEVEL : STATUS_LED_OFF_LEVEL);
+}
+
+static void status_led_init(void)
+{
+    gpio_config_t io_conf = {
+        .pin_bit_mask = (1ULL << STATUS_LED_GPIO),
+        .mode = GPIO_MODE_OUTPUT,
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE,
+    };
+    ESP_ERROR_CHECK(gpio_config(&io_conf));
+    status_led_set(false);
+}
 
 /* =========================================================
  * read_line — stable line reader (no ANSI escapes)
@@ -153,10 +177,12 @@ static void l2cap_callback(esp_bt_l2cap_cb_event_t event,
         break;
     case ESP_BT_L2CAP_OPEN_EVT:
         g_l2cap_fd = param->open.fd;
+        status_led_set(g_l2cap_fd >= 0);
         xSemaphoreGive(g_l2cap_sem);
         break;
     case ESP_BT_L2CAP_CLOSE_EVT:
         g_l2cap_fd = -1;
+        status_led_set(false);
         /* menu.c volume loops guard on g_l2cap_fd so they self-terminate */
         break;
     default:
@@ -251,7 +277,10 @@ esp_err_t do_connect(esp_bd_addr_t addr, const char **err_str)
 void do_disconnect(void)
 {
     if (g_l2cap_fd < 0)
+    {
+        status_led_set(false);
         return;
+    }
 
     esp_bt_l2cap_deinit();
     if (xSemaphoreTake(g_acl_disc_sem, pdMS_TO_TICKS(5000)) == pdTRUE)
@@ -263,6 +292,7 @@ void do_disconnect(void)
         ESP_LOGW(TAG, "Disconnect timeout — ACL may be stale on peer");
     }
     g_l2cap_fd = -1;
+    status_led_set(false);
 }
 
 static void espnow_recv_cb(const esp_now_recv_info_t *recv_info,
@@ -498,6 +528,7 @@ void app_main(void)
         ret = nvs_flash_init();
     }
     ESP_ERROR_CHECK(ret);
+    status_led_init();
 
     /* ── BT controller + Bluedroid ── */
     esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();

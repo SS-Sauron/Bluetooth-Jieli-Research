@@ -44,6 +44,7 @@
 #define A_YELLOW "\033[33m"
 #define A_GREEN "\033[32m"
 #define A_RED "\033[31m"
+#define A_WHITE "\033[37m"
 
 /* ── Persistent AVRCP transaction label ─────────────────────────────── */
 static uint8_t s_tl = 0;
@@ -79,6 +80,68 @@ extern char *bda2str(esp_bd_addr_t bda, char *str, size_t size);
 static inline uint32_t get_now_ms(void)
 {
     return xTaskGetTickCount() * portTICK_PERIOD_MS;
+}
+
+static bool target_addr_is_zero(void)
+{
+    for (size_t i = 0; i < sizeof(g_target_addr); i++)
+    {
+        if (g_target_addr[i] != 0)
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+static const char *target_name_for_addr(void)
+{
+    if (target_addr_is_zero())
+    {
+        return "(no target)";
+    }
+
+    for (int i = 0; i < MAX_REMOTE_DEVICES; i++)
+    {
+        if (g_remote_devices[i].in_use &&
+            memcmp(g_remote_devices[i].bda, g_target_addr, sizeof(esp_bd_addr_t)) == 0)
+        {
+            return g_remote_devices[i].name[0] ? g_remote_devices[i].name : "(unknown)";
+        }
+    }
+    return "(unknown)";
+}
+
+static const char *main_menu_color(int index)
+{
+    switch (index)
+    {
+    case 0:
+        return A_GREEN;  /* Bluetooth */
+    case 1:
+    case 2:
+        return A_YELLOW; /* Wi-Fi / RFID */
+    case 3:
+        return A_WHITE;  /* Status */
+    case 4:
+        return A_RED;    /* Reboot */
+    default:
+        return A_RST;
+    }
+}
+
+static bool mesh_recent(void)
+{
+    uint32_t now_ms = get_now_ms();
+    for (int i = 0; i < MAX_REMOTE_DEVICES; i++)
+    {
+        if (g_remote_devices[i].in_use &&
+            (uint32_t)(now_ms - g_remote_devices[i].last_seen_ms) < 10000)
+        {
+            return true;
+        }
+    }
+    return false;
 }
 
 /* ── check() ─────────────────────────────────────────────────────────── *
@@ -170,38 +233,53 @@ static void render_menu(const menu_option_t *opts, int n,
     printf(A_CLEAR);
 
     printf(A_BOLD A_CYAN
-           "┌─────────────────────────────────────────┐\n"
-           "│  AVRCP CONSOLE" A_RST A_CYAN "  %-24s" A_BOLD "│\n"
-           "└─────────────────────────────────────────┘\n" A_RST,
+           "╔═════════════════════════════════════════╗\n"
+           "║  AVRCP CONSOLE" A_RST A_CYAN "  %-24s" A_BOLD "║\n"
+           "╚═════════════════════════════════════════╝\n" A_RST,
            title ? title : "");
 
-    if (g_l2cap_fd >= 0)
+    bool connected = g_l2cap_fd >= 0;
+    const char *state_color = connected ? A_GREEN : A_RED;
+    const char *state_text = connected ? "CONNECTED" : "disconnected";
+    const char *state_mark = connected ? "●" : "○";
+    const char *target_name = target_name_for_addr();
+
+    if (target_addr_is_zero())
     {
-        printf(A_GREEN "  ● CONNECTED  "
-                       "%02x:%02x:%02x:%02x:%02x:%02x\n" A_RST,
-               g_target_addr[0], g_target_addr[1], g_target_addr[2],
-               g_target_addr[3], g_target_addr[4], g_target_addr[5]);
+        printf("%s  %s %-12s" A_RST " Target --:--:--:--:--:--  %.18s\n",
+               state_color, state_mark, state_text, target_name);
     }
     else
     {
-        printf(A_RED "  ○ disconnected\n" A_RST);
+        printf("%s  %s %-12s" A_RST " Target %02x:%02x:%02x:%02x:%02x:%02x  %.18s\n",
+               state_color, state_mark, state_text,
+               g_target_addr[0], g_target_addr[1], g_target_addr[2],
+               g_target_addr[3], g_target_addr[4], g_target_addr[5],
+               target_name);
     }
     printf("\n");
 
+    bool top_level = title && strcmp(title, "MAIN") == 0;
     for (int i = 0; i < n; i++)
     {
+        const char *row_color = top_level ? main_menu_color(i) : "";
         if (i == cursor)
         {
-            printf(A_INV "  %d. %-38s" A_RST "\n", i + 1, opts[i].label);
+            printf("%s" A_INV "  %d. %-38s" A_RST "\n",
+                   row_color, i + 1, opts[i].label);
         }
         else
         {
-            printf("  %d. %s\n", i + 1, opts[i].label);
+            printf("%s  %d. %s" A_RST "\n", row_color, i + 1, opts[i].label);
         }
     }
 
+    bool mesh_ok = mesh_recent();
     printf("\n" A_YELLOW
-           "  [W/S=↑↓] [A=back] [D/Enter=select] [1-9=pick] [Q/R=reboot]" A_RST "\n  > ");
+           "  [W/S=↑↓] [A=back] [D/Enter=select] [1-9=pick] [Q/R=reboot]" A_RST
+           "  %sMESH:%s" A_RST "\n  > ",
+           mesh_ok ? A_GREEN : A_RED,
+           mesh_ok ? "fresh" : "idle");
     fflush(stdout);
 }
 
@@ -393,16 +471,7 @@ static void action_connect(void)
     }
     else
     {
-        bool target_set = false;
-        for (size_t i = 0; i < sizeof(g_target_addr); i++)
-        {
-            if (g_target_addr[i] != 0)
-            {
-                target_set = true;
-                break;
-            }
-        }
-        if (!target_set)
+        if (target_addr_is_zero())
         {
             printf("  No target set. Use Device List to select a device.\n");
             vTaskDelay(pdMS_TO_TICKS(2000));
@@ -817,8 +886,8 @@ void menu_run_main(void)
 {
     static const menu_option_t main_opts[] = {
         MENU_OPT("Bluetooth", submenu_bluetooth),
-        MENU_OPT("Wi-Fi [future]", submenu_wifi),
-        MENU_OPT("RFID [future]", submenu_rfid),
+        MENU_OPT("Wi-Fi (soon)", submenu_wifi),
+        MENU_OPT("RFID (soon)", submenu_rfid),
         MENU_OPT("Status", action_status),
         MENU_OPT("Reboot", action_reboot),
     };
