@@ -46,8 +46,8 @@
 #define A_GREEN "\033[32m"
 
 #define SCAN_LED_GPIO GPIO_NUM_2
-#define SCAN_LED_ON_LEVEL 0
-#define SCAN_LED_OFF_LEVEL 1
+#define SCAN_LED_ON_LEVEL 1  // active‑high: write 1 to turn LED ON
+#define SCAN_LED_OFF_LEVEL 0 // active‑high: write 0 to turn LED OFF
 
 static const char *TAG = "BT_SCANNER";
 static volatile bool g_scan_enabled = true; // start scanning at boot
@@ -239,8 +239,7 @@ static void scan_led_task(void *arg)
         if (!g_scan_enabled)
         {
             g_new_device_blink_pending = false;
-            /* GPIO 2 board LED is off at level 1; keep it dark while stopped. */
-            scan_led_set(false);
+            scan_led_set(false); /* turn LED off (active‑high: level 0) */
             vTaskDelay(pdMS_TO_TICKS(100));
             continue;
         }
