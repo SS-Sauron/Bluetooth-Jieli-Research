@@ -37,6 +37,10 @@
 #define MAX_DISPLAY_ROWS 12
 #define SCANNER_DEBUG 1
 
+#ifndef ESP_BLE_AD_TYPE_MANUFACTURER
+#define ESP_BLE_AD_TYPE_MANUFACTURER 0xFF
+#endif
+
 #define A_RST "\033[0m"
 #define A_CYAN "\033[36m"
 #define A_GREEN "\033[32m"
@@ -97,6 +101,10 @@ typedef struct
     uint32_t last_seen_ms;
     int8_t rssi;
     uint32_t cod;
+    uint8_t type; /* 0=Classic, 1=BLE */
+    int8_t tx_power;
+    uint16_t company_id;
+    char vendor[32];
     uint8_t bdname_len;
     uint8_t bdname[ESP_BT_GAP_MAX_BDNAME_LEN + 1];
 } device_entry_t;
@@ -190,6 +198,20 @@ static inline uint32_t get_now_ms(void)
     return xTaskGetTickCount() * portTICK_PERIOD_MS;
 }
 
+static void device_entry_set_defaults(device_entry_t *entry)
+{
+    if (!entry)
+    {
+        return;
+    }
+
+    entry->tx_power = 127;
+    entry->company_id = 0x0000;
+    entry->type = 1;
+    strncpy(entry->vendor, "(unknown)", sizeof(entry->vendor) - 1);
+    entry->vendor[sizeof(entry->vendor) - 1] = '\0';
+}
+
 static void scan_led_set(bool on)
 {
     gpio_set_level(SCAN_LED_GPIO, on ? SCAN_LED_ON_LEVEL : SCAN_LED_OFF_LEVEL);
@@ -259,6 +281,88 @@ static void update_entry_name(device_entry_t *entry, const uint8_t *bdname, uint
     entry->bdname_len = bdname_len;
 }
 
+static uint8_t *find_valid_ble_ad(uint8_t *adv_data, uint8_t adv_len,
+                                  uint8_t *scan_rsp, uint8_t scan_rsp_len,
+                                  uint8_t ad_type, uint8_t min_len,
+                                  uint8_t *out_len)
+{
+    uint8_t data_len = 0;
+    uint8_t *data = esp_ble_resolve_adv_data_by_type(adv_data, adv_len, ad_type, &data_len);
+    if (data && data_len >= min_len)
+    {
+        if (out_len)
+        {
+            *out_len = data_len;
+        }
+        return data;
+    }
+
+    data_len = 0;
+    data = esp_ble_resolve_adv_data_by_type(scan_rsp, scan_rsp_len, ad_type, &data_len);
+    if (data && data_len >= min_len)
+    {
+        if (out_len)
+        {
+            *out_len = data_len;
+        }
+        return data;
+    }
+
+    return NULL;
+}
+
+static void update_ble_metadata(device_entry_t *entry,
+                                uint8_t *adv_data, uint8_t adv_len,
+                                uint8_t *scan_rsp, uint8_t scan_rsp_len)
+{
+    uint8_t data_len = 0;
+    uint8_t *data = find_valid_ble_ad(adv_data, adv_len, scan_rsp, scan_rsp_len,
+                                      ESP_BLE_AD_TYPE_TX_PWR, 1, &data_len);
+    if (data)
+    {
+        entry->tx_power = *((int8_t *)data);
+    }
+
+    data = find_valid_ble_ad(adv_data, adv_len, scan_rsp, scan_rsp_len,
+                             ESP_BLE_AD_TYPE_MANUFACTURER, 2, &data_len);
+    if (data)
+    {
+        entry->company_id = (uint16_t)data[0] | ((uint16_t)data[1] << 8);
+    }
+}
+
+static const char *cod_major_label(uint32_t cod)
+{
+    if (!esp_bt_gap_is_valid_cod(cod))
+    {
+        return "Unknown";
+    }
+
+    switch (esp_bt_gap_get_cod_major_dev(cod))
+    {
+    case 0x0100:
+        return "Computer";
+    case 0x0200:
+        return "Phone";
+    case 0x0300:
+        return "LAN";
+    case 0x0400:
+        return "Audio";
+    case 0x0500:
+        return "Peripheral";
+    case 0x0600:
+        return "Imaging";
+    case 0x0700:
+        return "Wearable";
+    case 0x0800:
+        return "Toy";
+    case 0x0900:
+        return "Health";
+    default:
+        return "Unknown";
+    }
+}
+
 static device_entry_t *find_or_create_device(esp_bd_addr_t bda)
 {
     for (int i = 0; i < MAX_TRACKED_DEVICES; i++)
@@ -274,6 +378,7 @@ static device_entry_t *find_or_create_device(esp_bd_addr_t bda)
         if (!g_devices[i].in_use)
         {
             memset(&g_devices[i], 0, sizeof(g_devices[i]));
+            device_entry_set_defaults(&g_devices[i]);
             memcpy(g_devices[i].bda, bda, ESP_BD_ADDR_LEN);
             g_devices[i].in_use = true;
             return &g_devices[i];
@@ -440,7 +545,7 @@ static void send_device_over_espnow(device_entry_t *entry)
 
     cmd.payload.device.rssi = entry->rssi;
     cmd.payload.device.cod = entry->cod;
-    cmd.payload.device.type = (entry->cod != 0) ? 0 : 1; /* 0=Classic, 1=BLE */
+    cmd.payload.device.type = entry->type;
 
     esp_err_t ret = esp_now_send(s_attack_mac, (const uint8_t *)&cmd, sizeof(cmd));
     if (ret == ESP_OK)
@@ -513,8 +618,16 @@ static void log_ble_scan_result(esp_ble_gap_cb_param_t *param)
         update_entry_name(entry, name_ptr, name_len);
     }
 
+    uint8_t *scan_rsp = param->scan_rst.ble_adv + param->scan_rst.adv_data_len;
+    update_ble_metadata(entry,
+                        param->scan_rst.ble_adv,
+                        param->scan_rst.adv_data_len,
+                        scan_rsp,
+                        param->scan_rst.scan_rsp_len);
+
     entry->last_seen_ms = get_now_ms();
     entry->rssi = (int8_t)param->scan_rst.rssi;
+    entry->type = 1;
     if (is_new)
     {
         entry->cod = 0;
@@ -647,15 +760,7 @@ static void update_device_info(esp_bt_gap_cb_param_t *param)
         }
     }
 
-    /* search for device with Major device type "PHONE" or "Audio/Video" in COD */
     app_gap_cb_t *p_dev = &m_dev_info;
-
-    if (!esp_bt_gap_is_valid_cod(cod) ||
-        (!(esp_bt_gap_get_cod_major_dev(cod) == ESP_BT_COD_MAJOR_DEV_PHONE) &&
-         !(esp_bt_gap_get_cod_major_dev(cod) == ESP_BT_COD_MAJOR_DEV_AV)))
-    {
-        return;
-    }
 
     memcpy(p_dev->bda, param->disc_res.bda, ESP_BD_ADDR_LEN);
     p_dev->cod = cod;
@@ -695,6 +800,7 @@ static void update_device_info(esp_bt_gap_cb_param_t *param)
     entry->last_seen_ms = get_now_ms();
     entry->rssi = rssi;
     entry->cod = cod;
+    entry->type = 0;
     if (p_dev->bdname_len > 0)
     {
         update_entry_name(entry, p_dev->bdname, p_dev->bdname_len);
@@ -874,6 +980,7 @@ static void dashboard_task(void *arg)
      * automatically resize together.                                    */
     const int COL_MAC = 17;
     const int COL_TYPE = 7;
+    const int COL_CLASS = 10;
     const int COL_RSSI = 5;
     const int COL_AGE = 13;
 
@@ -888,10 +995,11 @@ static void dashboard_task(void *arg)
             /* ── Build header — box_width is derived from its length ── */
             char header[128];
             snprintf(header, sizeof(header),
-                     "Scan #%-5" PRIu32 "  %-*s  %-*s  %*s  %*s  %s",
+                     "Scan #%-5" PRIu32 "  %-*s  %-*s  %-*s  %*s  %*s  %s",
                      g_scan_cycle_count,
                      COL_MAC, "MAC",
                      COL_TYPE, "Type",
+                     COL_CLASS, "Class",
                      COL_RSSI, "RSSI",
                      COL_AGE, "Last Seen (s)",
                      "Name");
@@ -939,8 +1047,10 @@ static void dashboard_task(void *arg)
                     continue;
                 }
 
-                const char *type = entry->cod != 0 ? "Classic" : "BLE";
-                const char *row_color = entry->cod != 0 ? A_GREEN : A_CYAN;
+                bool is_classic = entry->type == 0;
+                const char *type = is_classic ? "Classic" : "BLE";
+                const char *row_color = is_classic ? A_GREEN : A_CYAN;
+                const char *class_label = is_classic ? cod_major_label(entry->cod) : "BLE";
                 const char *name = entry->bdname_len > 0
                                        ? (char *)entry->bdname
                                        : "(unknown)";
@@ -952,9 +1062,10 @@ static void dashboard_task(void *arg)
                 /* Build row from the same COL_* widths as the header */
                 char row[320]; // safe upper bound for formatted row + name
                 snprintf(row, sizeof(row),
-                         "%-*s  %-*s  %*d  %*s  %s",
+                         "%-*s  %-*s  %-*s  %*d  %*s  %s",
                          COL_MAC, bda2str(entry->bda, bda_str, sizeof(bda_str)),
                          COL_TYPE, type,
+                         COL_CLASS, class_label,
                          COL_RSSI, (int)entry->rssi,
                          COL_AGE, age_str,
                          name);
