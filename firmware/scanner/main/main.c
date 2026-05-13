@@ -953,11 +953,12 @@ static void dashboard_task(void *arg)
     /* Column widths — single source of truth for header and device rows.
      * Change a value here and both the header label and the data column
      * automatically resize together.                                    */
-    const int COL_MAC = 17;
-    const int COL_TYPE = 7;
-    const int COL_CLASS = 10;
-    const int COL_RSSI = 5;
-    const int COL_AGE = 13;
+    const int COL_MAC    = 14;
+    const int COL_TYPE   =  7;
+    const int COL_VENDOR = 10;
+    const int COL_COD    =  8;
+    const int COL_RSSI   =  5;
+    const int COL_AGE    = 10;
 
     while (1)
     {
@@ -970,13 +971,14 @@ static void dashboard_task(void *arg)
             /* ── Build header — box_width is derived from its length ── */
             char header[128];
             snprintf(header, sizeof(header),
-                     "Scan #%-5" PRIu32 "  %-*s  %-*s  %-*s  %*s  %*s  %s",
+                     "#%-3" PRIu32 "  %-*s  %-*s  %-*s  %-*s  %*s  %*s  %s",
                      g_scan_cycle_count,
-                     COL_MAC, "MAC",
-                     COL_TYPE, "Type",
-                     COL_CLASS, "CoD",
-                     COL_RSSI, "RSSI",
-                     COL_AGE, "Last Seen (s)",
+                     COL_MAC,    "MAC",
+                     COL_TYPE,   "Type",
+                     COL_VENDOR, "Vendor",
+                     COL_COD,    "Class",
+                     COL_RSSI,   "RSSI",
+                     COL_AGE,    "Last Seen",
                      "Name");
 
             int content_width = (int)strlen(header);
@@ -1042,15 +1044,23 @@ static void dashboard_task(void *arg)
                 char age_str[16];
                 snprintf(age_str, sizeof(age_str), "%" PRIu32 "s", age_ms / 1000);
 
-                /* Build row from the same COL_* widths as the header */
-                char row[320]; // safe upper bound for formatted row + name
+                /* Format CoD as raw hex for Classic, "BLE" for BLE */
+                char class_str[16];
+                if (entry->cod != 0) {
+                    snprintf(class_str, sizeof(class_str), "0x%06" PRIx32, entry->cod);
+                } else {
+                    snprintf(class_str, sizeof(class_str), "BLE");
+                }
+
+                char row[320];
                 snprintf(row, sizeof(row),
-                         "%-*s  %-*s  %-*s  %*d  %*s  %s",
-                         COL_MAC, bda2str(entry->bda, bda_str, sizeof(bda_str)),
-                         COL_TYPE, type,
-                         COL_CLASS, class_str,
-                         COL_RSSI, (int)entry->rssi,
-                         COL_AGE, age_str,
+                         "%-*s  %-*s  %-*s  %-*s  %*d  %*s  %s",
+                         COL_MAC,    bda2str(entry->bda, bda_str, sizeof(bda_str)),
+                         COL_TYPE,   type,
+                         COL_VENDOR, entry->vendor,
+                         COL_COD,    class_str,
+                         COL_RSSI,   (int)entry->rssi,
+                         COL_AGE,    age_str,
                          name);
 
                 /* Truncate at content_width so a long name cannot break
