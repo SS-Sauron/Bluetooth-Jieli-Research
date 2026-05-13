@@ -37,6 +37,9 @@ typedef struct
     int8_t rssi;    /* Signal strength in dBm                             */
     uint32_t cod;   /* Class of Device (0 for BLE devices)                */
     uint8_t type;   /* 0 = Classic BR/EDR,  1 = BLE                      */
+    int8_t tx_power;     /* TX Power in dBm, or 127 if unknown             */
+    uint16_t company_id; /* Bluetooth SIG Company ID, 0 if unknown         */
+    char vendor[32];     /* OUI vendor name, "(unknown)" until filled      */
 } device_info_t;
 
 /* ── Top-level command packet ───────────────────────────────────────────── */

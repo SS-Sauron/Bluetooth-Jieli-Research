@@ -68,6 +68,9 @@ extern "C"
         uint8_t type; // 0 = Classic, 1 = BLE
         char name[32];
         uint32_t last_seen_ms;
+        int8_t tx_power;
+        uint16_t company_id;
+        char vendor[32];
     } remote_device_t;
 
     extern remote_device_t g_remote_devices[MAX_REMOTE_DEVICES];

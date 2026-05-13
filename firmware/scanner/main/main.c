@@ -514,6 +514,10 @@ static void send_device_over_espnow(device_entry_t *entry)
     cmd.payload.device.rssi = entry->rssi;
     cmd.payload.device.cod = entry->cod;
     cmd.payload.device.type = entry->type;
+    cmd.payload.device.tx_power = entry->tx_power;
+    cmd.payload.device.company_id = entry->company_id;
+    strncpy(cmd.payload.device.vendor, entry->vendor, sizeof(cmd.payload.device.vendor) - 1);
+    cmd.payload.device.vendor[sizeof(cmd.payload.device.vendor) - 1] = '\0';
 
     esp_err_t ret = esp_now_send(s_attack_mac, (const uint8_t *)&cmd, sizeof(cmd));
     if (ret == ESP_OK)

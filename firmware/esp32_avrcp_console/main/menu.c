@@ -605,6 +605,11 @@ void remote_device_update(device_info_t *d)
             g_remote_devices[i].rssi = d->rssi;
             g_remote_devices[i].cod = d->cod;
             g_remote_devices[i].type = d->type;
+            g_remote_devices[i].tx_power = d->tx_power;
+            g_remote_devices[i].company_id = d->company_id;
+            strncpy(g_remote_devices[i].vendor, d->vendor,
+                    sizeof(g_remote_devices[i].vendor) - 1);
+            g_remote_devices[i].vendor[sizeof(g_remote_devices[i].vendor) - 1] = '\0';
             g_remote_devices[i].last_seen_ms = get_now_ms();
             if (d->name[0])
             {
@@ -625,6 +630,11 @@ void remote_device_update(device_info_t *d)
             g_remote_devices[i].rssi = d->rssi;
             g_remote_devices[i].cod = d->cod;
             g_remote_devices[i].type = d->type;
+            g_remote_devices[i].tx_power = d->tx_power;
+            g_remote_devices[i].company_id = d->company_id;
+            strncpy(g_remote_devices[i].vendor, d->vendor,
+                    sizeof(g_remote_devices[i].vendor) - 1);
+            g_remote_devices[i].vendor[sizeof(g_remote_devices[i].vendor) - 1] = '\0';
             g_remote_devices[i].last_seen_ms = get_now_ms();
             if (d->name[0])
             {
