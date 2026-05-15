@@ -304,6 +304,11 @@ static void espnow_recv_cb(const esp_now_recv_info_t *recv_info,
     {
         command_t cmd;
         memcpy(&cmd, data, sizeof(cmd));
+        if (cmd.version != ESPNOW_PROTO_VERSION)
+        {
+            ESP_LOGW(TAG, "Dropping ESP-NOW packet with unsupported version 0x%02x", cmd.version);
+            return;
+        }
         if (g_espnow_queue)
         {
             xQueueSend(g_espnow_queue, &cmd, 0);
@@ -320,11 +325,20 @@ void espnow_receive_task(void *arg)
     {
         if (xQueueReceive(g_espnow_queue, &cmd, portMAX_DELAY))
         {
+            if (cmd.version != ESPNOW_PROTO_VERSION)
+            {
+                continue;
+            }
+
             switch (cmd.cmd_id)
             {
             case CMD_SEND_DEVICE:
-                remote_device_update(&cmd.payload.device);
+            {
+                device_info_t device;
+                memcpy(&device, &cmd.payload.device, sizeof(device));
+                remote_device_update(&device);
                 break;
+            }
 
             case CMD_SET_TARGET:
                 memcpy(g_target_addr, cmd.payload.mac, 6);

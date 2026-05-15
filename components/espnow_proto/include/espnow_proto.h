@@ -14,6 +14,10 @@
  *   Any peer →  Attack   CMD_LAUNCH_ATTACK  trigger the current menu action
  */
 
+/* ── Protocol version ──────────────────────────────────────────────────── */
+
+#define ESPNOW_PROTO_VERSION 0x01
+
 /* ── Peer MAC addresses ─────────────────────────────────────────────────── */
 
 #define PEER_SCANNER_MAC {0x78, 0x1c, 0x3c, 0xa8, 0xdc, 0x72}
@@ -40,16 +44,18 @@ typedef struct
     int8_t tx_power;     /* TX Power in dBm, or 127 if unknown             */
     uint16_t company_id; /* Bluetooth SIG Company ID, 0 if unknown         */
     char vendor[32];     /* OUI vendor name, "(unknown)" until filled      */
-} device_info_t;
+} __attribute__((packed)) device_info_t;
 
 /* ── Top-level command packet ───────────────────────────────────────────── */
 
 typedef struct
 {
-    uint8_t cmd_id; /* One of espnow_cmd_id_t                     */
+    uint8_t version;     /* ESPNOW_PROTO_VERSION                           */
+    uint8_t reserved[3]; /* Reserved for future protocol flags/alignment    */
+    uint8_t cmd_id;      /* One of espnow_cmd_id_t                          */
     union
     {
         device_info_t device; /* CMD_SEND_DEVICE  payload                   */
         uint8_t mac[6];       /* CMD_SET_TARGET   payload (target BD_ADDR)  */
     } payload;
-} command_t;
+} __attribute__((packed)) command_t;
