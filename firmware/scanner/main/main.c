@@ -951,13 +951,13 @@ static void dashboard_task(void *arg)
     char bda_str[18];
 
     /* Fixed-width columns */
-    const int COL_MAC    = 17;
-    const int COL_TYPE   = 7;
+    const int COL_MAC = 17;
+    const int COL_TYPE = 7;
     const int COL_VENDOR = 10;
-    const int COL_COD    = 8;
-    const int COL_RSSI   = 5;
-    const int COL_AGE    = 10;
-    
+    const int COL_COD = 8;
+    const int COL_RSSI = 5;
+    const int COL_AGE = 10;
+
     /* Maximum allowed expansion for the Name column to prevent terminal wrapping */
     const int MAX_NAME_LIMIT = 30;
 
@@ -971,38 +971,41 @@ static void dashboard_task(void *arg)
 
             /* 1. Calculate Dynamic Column Width for "Name" */
             int COL_NAME = 4; // Start with width of header "Name"
-            
+
             for (int i = 0; i < MAX_TRACKED_DEVICES; i++)
             {
                 device_entry_t *entry = &g_devices[i];
-                if (!entry->in_use) continue;
+                if (!entry->in_use)
+                    continue;
 
                 // Only consider devices seen within the last 2 minutes
-                if ((now_ms - entry->last_seen_ms) < 120000) 
+                if ((now_ms - entry->last_seen_ms) < 120000)
                 {
                     int name_len = (entry->bdname_len > 0) ? (int)strlen((char *)entry->bdname) : 9; // 9 for "(unknown)"
-                    if (name_len > COL_NAME) {
+                    if (name_len > COL_NAME)
+                    {
                         COL_NAME = name_len;
                     }
                 }
             }
 
             // Apply the cap to ensure the box doesn't exceed screen width
-            if (COL_NAME > MAX_NAME_LIMIT) {
+            if (COL_NAME > MAX_NAME_LIMIT)
+            {
                 COL_NAME = MAX_NAME_LIMIT;
             }
 
             /* 2. Build the Header based on dynamic width */
-            char header[256]; 
+            char header[256];
             snprintf(header, sizeof(header),
                      "%-*s %-*s %-*s %-*s %*s %*s %-*s",
-                     COL_MAC,    "MAC",
-                     COL_TYPE,   "Type",
+                     COL_MAC, "MAC",
+                     COL_TYPE, "Type",
                      COL_VENDOR, "Vendor",
-                     COL_COD,    "Class",
-                     COL_RSSI,   "RSSI",
-                     COL_AGE,    "Last Seen",
-                     COL_NAME,   "Name");
+                     COL_COD, "Class",
+                     COL_RSSI, "RSSI",
+                     COL_AGE, "Last Seen",
+                     COL_NAME, "Name");
 
             int content_width = (int)strlen(header);
             int box_width = content_width + 2;
@@ -1012,7 +1015,8 @@ static void dashboard_task(void *arg)
 
             // Top border
             printf("┌");
-            for (int i = 0; i < box_width; i++) printf("─");
+            for (int i = 0; i < box_width; i++)
+                printf("─");
             printf("┐\n");
 
             // Scan indicator
@@ -1026,17 +1030,20 @@ static void dashboard_task(void *arg)
 
             // Divider
             printf("├");
-            for (int i = 0; i < box_width; i++) printf("─");
+            for (int i = 0; i < box_width; i++)
+                printf("─");
             printf("┤\n");
 
             /* 4. Device rows */
             for (int i = 0; i < MAX_TRACKED_DEVICES; i++)
             {
                 device_entry_t *entry = &g_devices[i];
-                if (!entry->in_use) continue;
+                if (!entry->in_use)
+                    continue;
 
                 uint32_t age_ms = now_ms - entry->last_seen_ms;
-                if (age_ms >= 120000) continue;
+                if (age_ms >= 120000)
+                    continue;
 
                 if (displayed_rows >= MAX_DISPLAY_ROWS)
                 {
@@ -1048,43 +1055,48 @@ static void dashboard_task(void *arg)
                 const char *type = is_classic ? "Classic" : "BLE";
                 const char *row_color = is_classic ? A_GREEN : A_CYAN;
 
-                const char *name = entry->bdname_len > 0 
-                                   ? (char *)entry->bdname 
-                                   : "(unknown)";
+                const char *name = entry->bdname_len > 0
+                                       ? (char *)entry->bdname
+                                       : "(unknown)";
 
                 char age_str[16];
                 snprintf(age_str, sizeof(age_str), "%" PRIu32 "s", age_ms / 1000);
 
                 char class_str[16];
-                if (entry->cod != 0) {
+                if (entry->cod != 0)
+                {
                     snprintf(class_str, sizeof(class_str), "0x%06" PRIx32, entry->cod);
-                } else {
+                }
+                else
+                {
                     snprintf(class_str, sizeof(class_str), "BLE");
                 }
 
-                /* 
-                 * The fix: using %-*.*s 
+                /*
+                 * The fix: using %-*.*s
                  * This provides both minimum padding and maximum truncation.
                  */
                 printf("%s│ %-*s %-*s %-*.*s %-*s %*d %*s %-*.*s │" A_RST "\n",
                        row_color,
-                       COL_MAC,    bda2str(entry->bda, bda_str, sizeof(bda_str)),
-                       COL_TYPE,   type,
+                       COL_MAC, bda2str(entry->bda, bda_str, sizeof(bda_str)),
+                       COL_TYPE, type,
                        COL_VENDOR, COL_VENDOR, entry->vendor, // Truncate Vendor if too long
-                       COL_COD,    class_str,
-                       COL_RSSI,   (int)entry->rssi,
-                       COL_AGE,    age_str,
-                       COL_NAME,   COL_NAME, name);           // Truncate Name to dynamic limit
-                
+                       COL_COD, class_str,
+                       COL_RSSI, (int)entry->rssi,
+                       COL_AGE, age_str,
+                       COL_NAME, COL_NAME, name); // Truncate Name to dynamic limit
+
                 displayed_rows++;
             }
 
             /* 5. Empty-state & Footer */
-            if (displayed_rows == 0) {
+            if (displayed_rows == 0)
+            {
                 printf("│ %-*s │\n", content_width, "(no devices in range)");
             }
 
-            if (hidden_rows > 0) {
+            if (hidden_rows > 0)
+            {
                 char hidden_msg[128];
                 snprintf(hidden_msg, sizeof(hidden_msg),
                          "... and %" PRIu32 " more device(s) - type 'table off' for full list.",
@@ -1093,14 +1105,16 @@ static void dashboard_task(void *arg)
             }
 
             printf("├");
-            for (int i = 0; i < box_width; i++) printf("─");
+            for (int i = 0; i < box_width; i++)
+                printf("─");
             printf("┤\n");
 
             printf("│ %-*s │\n", content_width,
                    "[table on|off] [start|stop] [active|passive]");
 
             printf("└");
-            for (int i = 0; i < box_width; i++) printf("─");
+            for (int i = 0; i < box_width; i++)
+                printf("─");
             printf("┘\n");
         }
 

@@ -1,0 +1,13 @@
+menu "Scanner Hardware Options"
+
+    config SCANNER_NRF24
+        bool "Enable NRF24L01 2.4 GHz radio support"
+        default n
+        help
+            Enable optional NRF24L01 2.4 GHz radio support for the scanner.
+            When enabled, the firmware initializes an NRF24L01 module on the
+            ESP32 VSPI pins and exposes a full-band spectrum scan API. Leave
+            this disabled for scanner builds that do not have NRF24 hardware
+            attached.
+
+endmenu
