@@ -118,6 +118,13 @@ typedef struct
     uint8_t bdname[ESP_BT_GAP_MAX_BDNAME_LEN + 1];
 } device_entry_t;
 
+typedef struct
+{
+    bool valid;
+    esp_bd_addr_t bda;
+    uint32_t last_seen_ms;
+} device_eviction_log_t;
+
 static app_gap_cb_t m_dev_info;
 static device_entry_t g_devices[MAX_TRACKED_DEVICES];
 
@@ -388,9 +395,29 @@ static void update_ble_metadata(device_entry_t *entry,
     }
 }
 
-static device_entry_t *find_or_create_device(esp_bd_addr_t bda)
+static void log_device_eviction(const device_eviction_log_t *eviction_log)
+{
+    if (!eviction_log || !eviction_log->valid)
+    {
+        return;
+    }
+
+    char evicted_bda[18];
+    esp_bd_addr_t evicted_bda_addr;
+    memcpy(evicted_bda_addr, eviction_log->bda, ESP_BD_ADDR_LEN);
+    ESP_LOGD(TAG, "Evicting stale device entry %s last_seen=%" PRIu32 " ms",
+             bda2str(evicted_bda_addr, evicted_bda, sizeof(evicted_bda)),
+             eviction_log->last_seen_ms);
+}
+
+static device_entry_t *find_or_create_device(esp_bd_addr_t bda, device_eviction_log_t *eviction_log)
 {
     /* Caller must hold g_scanner_mutex while accessing g_devices. */
+    if (eviction_log)
+    {
+        memset(eviction_log, 0, sizeof(*eviction_log));
+    }
+
     for (int i = 0; i < MAX_TRACKED_DEVICES; i++)
     {
         if (g_devices[i].in_use && memcmp(g_devices[i].bda, bda, ESP_BD_ADDR_LEN) == 0)
@@ -422,10 +449,12 @@ static device_entry_t *find_or_create_device(esp_bd_addr_t bda)
         }
     }
 
-    char evicted_bda[18];
-    ESP_LOGD(TAG, "Evicting stale device entry %s last_seen=%" PRIu32 " ms",
-             bda2str(g_devices[oldest_index].bda, evicted_bda, sizeof(evicted_bda)),
-             oldest_seen_ms);
+    if (eviction_log)
+    {
+        eviction_log->valid = true;
+        memcpy(eviction_log->bda, g_devices[oldest_index].bda, ESP_BD_ADDR_LEN);
+        eviction_log->last_seen_ms = oldest_seen_ms;
+    }
 
     memset(&g_devices[oldest_index], 0, sizeof(g_devices[oldest_index]));
     device_entry_set_defaults(&g_devices[oldest_index]);
@@ -724,6 +753,7 @@ static void log_ble_scan_result(esp_ble_gap_cb_param_t *param)
     bool show_table = true;
     int8_t rssi = 0;
     char name_copy[ESP_BT_GAP_MAX_BDNAME_LEN + 1] = {0};
+    device_eviction_log_t eviction_log = {0};
 
     /* ── Resolve device name ─────────────────────────────────────────────
      * The advertising data and scan response are stored in one contiguous
@@ -762,7 +792,7 @@ static void log_ble_scan_result(esp_ble_gap_cb_param_t *param)
 
     /* Shared scanner state is protected while this callback updates g_devices and flags. */
     scanner_mutex_lock();
-    device_entry_t *entry = find_or_create_device(param->scan_rst.bda);
+    device_entry_t *entry = find_or_create_device(param->scan_rst.bda, &eviction_log);
     if (!entry)
     {
         scanner_mutex_unlock();
@@ -812,6 +842,8 @@ static void log_ble_scan_result(esp_ble_gap_cb_param_t *param)
     build_device_command_locked(entry, &cmd);
     should_enqueue = true;
     scanner_mutex_unlock();
+
+    log_device_eviction(&eviction_log);
 
     if (!show_table)
     {
@@ -942,6 +974,7 @@ static void update_device_info(esp_bt_gap_cb_param_t *param)
     bool is_new = false;
     bool show_table = true;
     char name_copy[ESP_BT_GAP_MAX_BDNAME_LEN + 1] = {0};
+    device_eviction_log_t eviction_log = {0};
 
     for (int i = 0; i < param->disc_res.num_prop; i++)
     {
@@ -1024,7 +1057,7 @@ static void update_device_info(esp_bt_gap_cb_param_t *param)
         sanitize_name(p_dev->bdname, p_dev->bdname_len);
     }
 
-    device_entry_t *entry = find_or_create_device(param->disc_res.bda);
+    device_entry_t *entry = find_or_create_device(param->disc_res.bda, &eviction_log);
     if (!entry)
     {
         p_dev->state = APP_GAP_STATE_DEVICE_DISCOVER_COMPLETE;
@@ -1065,6 +1098,8 @@ static void update_device_info(esp_bt_gap_cb_param_t *param)
 
     p_dev->state = APP_GAP_STATE_DEVICE_DISCOVER_COMPLETE;
     scanner_mutex_unlock();
+
+    log_device_eviction(&eviction_log);
 
     if (!show_table)
     {

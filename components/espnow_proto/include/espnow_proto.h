@@ -6,7 +6,7 @@
  * espnow_proto.h — ESP-NOW wire protocol for scanner ↔ attack coordination.
  *
  * Scanner ESP32  (USB1):  78:1c:3c:a8:dc:72
- * Attack  ESP32  (USB0):  78:1c:3c:a5:a8:d2
+ * Attack  ESP32  (USB0):  78:1c:3c:a5:a8:d0
  *
  * Message flow:
  *   Scanner  →  Attack   CMD_SEND_DEVICE    a Bluetooth device was found
@@ -36,11 +36,11 @@ typedef enum
 
 typedef struct
 {
-    uint8_t bda[6]; /* Bluetooth MAC address of the discovered device     */
-    char name[32];  /* Device name — max 31 chars + null terminator       */
-    int8_t rssi;    /* Signal strength in dBm                             */
-    uint32_t cod;   /* Class of Device (0 for BLE devices)                */
-    uint8_t type;   /* 0 = Classic BR/EDR,  1 = BLE                      */
+    uint8_t bda[6];      /* Bluetooth MAC address of the discovered device     */
+    char name[32];       /* Device name — max 31 chars + null terminator       */
+    int8_t rssi;         /* Signal strength in dBm                             */
+    uint32_t cod;        /* Class of Device (0 for BLE devices)                */
+    uint8_t type;        /* 0 = Classic BR/EDR,  1 = BLE                      */
     int8_t tx_power;     /* TX Power in dBm, or 127 if unknown             */
     uint16_t company_id; /* Bluetooth SIG Company ID, 0 if unknown         */
     char vendor[32];     /* OUI vendor name, "(unknown)" until filled      */
