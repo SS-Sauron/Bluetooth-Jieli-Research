@@ -14,14 +14,11 @@
 #include <string.h>
 #include <inttypes.h>
 #include "freertos/FreeRTOS.h"
-#include "freertos/queue.h"
-#include "freertos/semphr.h"
 #include "freertos/task.h"
 #include "nvs.h"
 #include "nvs_flash.h"
 #include "esp_system.h"
 #include "esp_log.h"
-#include "esp_heap_caps.h"
 #include "esp_bt.h"
 #include "esp_bt_main.h"
 #include "esp_bt_device.h"
@@ -38,10 +35,6 @@
 #define GAP_TAG "GAP"
 #define MAX_TRACKED_DEVICES 64
 #define MAX_DISPLAY_ROWS 12
-#define ESPNOW_QUEUE_DEPTH 32
-#define ESPNOW_SEND_MAX_ATTEMPTS 3
-#define ESPNOW_RETRY_DELAY_MS 50
-#define ESPNOW_CHANNEL 1
 #define SCANNER_DEBUG 1
 
 #ifndef ESP_BLE_AD_TYPE_MANUFACTURER
@@ -67,8 +60,6 @@ static volatile bool g_show_table = true;
 static uint32_t g_scan_cycle_count = 0;
 static volatile bool g_ble_active_scan = true; // true = active (names/UUIDs), false = passive (stealth)
 static volatile bool g_new_device_blink_pending = false;
-static SemaphoreHandle_t g_scanner_mutex = NULL;
-static QueueHandle_t g_espnow_queue = NULL;
 
 /* Attack ESP32 peer MAC - shared by espnow_init() and send_device_over_espnow() */
 static const uint8_t s_attack_mac[6] = PEER_ATTACK_MAC;
@@ -118,31 +109,8 @@ typedef struct
     uint8_t bdname[ESP_BT_GAP_MAX_BDNAME_LEN + 1];
 } device_entry_t;
 
-typedef struct
-{
-    bool valid;
-    esp_bd_addr_t bda;
-    uint32_t last_seen_ms;
-} device_eviction_log_t;
-
 static app_gap_cb_t m_dev_info;
 static device_entry_t g_devices[MAX_TRACKED_DEVICES];
-
-static void scanner_mutex_lock(void)
-{
-    if (g_scanner_mutex)
-    {
-        xSemaphoreTake(g_scanner_mutex, portMAX_DELAY);
-    }
-}
-
-static void scanner_mutex_unlock(void)
-{
-    if (g_scanner_mutex)
-    {
-        xSemaphoreGive(g_scanner_mutex);
-    }
-}
 
 static char *bda2str(esp_bd_addr_t bda, char *str, size_t size)
 {
@@ -155,22 +123,6 @@ static char *bda2str(esp_bd_addr_t bda, char *str, size_t size)
     snprintf(str, size, "%02x:%02x:%02x:%02x:%02x:%02x",
              p[0], p[1], p[2], p[3], p[4], p[5]);
     return str;
-}
-
-static void sanitize_name(uint8_t *name, size_t len)
-{
-    if (!name)
-    {
-        return;
-    }
-
-    for (size_t i = 0; i < len; i++)
-    {
-        if (name[i] < 0x20 || name[i] > 0x7e)
-        {
-            name[i] = '.';
-        }
-    }
 }
 
 static char *uuid2str(esp_bt_uuid_t *uuid, char *str, size_t size)
@@ -284,34 +236,19 @@ static void scan_led_task(void *arg)
 
     while (1)
     {
-        /* Shared scanner flags are read and updated while g_scanner_mutex is held. */
-        scanner_mutex_lock();
-        bool scan_enabled = g_scan_enabled;
-        bool blink_pending = g_new_device_blink_pending;
-        if (!scan_enabled || blink_pending)
+        if (!g_scan_enabled)
         {
             g_new_device_blink_pending = false;
-        }
-        scanner_mutex_unlock();
-
-        if (!scan_enabled)
-        {
             scan_led_set(false); /* turn LED off (active‑high: level 0) */
             vTaskDelay(pdMS_TO_TICKS(100));
             continue;
         }
 
-        if (blink_pending)
+        if (g_new_device_blink_pending)
         {
-            for (int i = 0; i < 2; i++)
+            g_new_device_blink_pending = false;
+            for (int i = 0; i < 2 && g_scan_enabled; i++)
             {
-                scanner_mutex_lock();
-                scan_enabled = g_scan_enabled;
-                scanner_mutex_unlock();
-                if (!scan_enabled)
-                {
-                    break;
-                }
                 scan_led_set(true);
                 vTaskDelay(pdMS_TO_TICKS(100));
                 scan_led_set(false);
@@ -341,7 +278,6 @@ static void update_entry_name(device_entry_t *entry, const uint8_t *bdname, uint
 
     memcpy(entry->bdname, bdname, bdname_len);
     entry->bdname[bdname_len] = '\0';
-    sanitize_name(entry->bdname, bdname_len);
     entry->bdname_len = bdname_len;
 }
 
@@ -395,29 +331,8 @@ static void update_ble_metadata(device_entry_t *entry,
     }
 }
 
-static void log_device_eviction(const device_eviction_log_t *eviction_log)
+static device_entry_t *find_or_create_device(esp_bd_addr_t bda)
 {
-    if (!eviction_log || !eviction_log->valid)
-    {
-        return;
-    }
-
-    char evicted_bda[18];
-    esp_bd_addr_t evicted_bda_addr;
-    memcpy(evicted_bda_addr, eviction_log->bda, ESP_BD_ADDR_LEN);
-    ESP_LOGD(TAG, "Evicting stale device entry %s last_seen=%" PRIu32 " ms",
-             bda2str(evicted_bda_addr, evicted_bda, sizeof(evicted_bda)),
-             eviction_log->last_seen_ms);
-}
-
-static device_entry_t *find_or_create_device(esp_bd_addr_t bda, device_eviction_log_t *eviction_log)
-{
-    /* Caller must hold g_scanner_mutex while accessing g_devices. */
-    if (eviction_log)
-    {
-        memset(eviction_log, 0, sizeof(*eviction_log));
-    }
-
     for (int i = 0; i < MAX_TRACKED_DEVICES; i++)
     {
         if (g_devices[i].in_use && memcmp(g_devices[i].bda, bda, ESP_BD_ADDR_LEN) == 0)
@@ -438,66 +353,23 @@ static device_entry_t *find_or_create_device(esp_bd_addr_t bda, device_eviction_
         }
     }
 
-    int oldest_index = 0;
-    uint32_t oldest_seen_ms = g_devices[0].last_seen_ms;
-    for (int i = 1; i < MAX_TRACKED_DEVICES; i++)
-    {
-        if (g_devices[i].last_seen_ms < oldest_seen_ms)
-        {
-            oldest_seen_ms = g_devices[i].last_seen_ms;
-            oldest_index = i;
-        }
-    }
-
-    if (eviction_log)
-    {
-        eviction_log->valid = true;
-        memcpy(eviction_log->bda, g_devices[oldest_index].bda, ESP_BD_ADDR_LEN);
-        eviction_log->last_seen_ms = oldest_seen_ms;
-    }
-
-    memset(&g_devices[oldest_index], 0, sizeof(g_devices[oldest_index]));
-    device_entry_set_defaults(&g_devices[oldest_index]);
-    memcpy(g_devices[oldest_index].bda, bda, ESP_BD_ADDR_LEN);
-    g_devices[oldest_index].in_use = true;
-    return &g_devices[oldest_index];
-}
-
-static esp_err_t set_scanner_discoverability(bool enable)
-{
-    esp_err_t ret = esp_bt_gap_set_scan_mode(
-        enable ? ESP_BT_CONNECTABLE : ESP_BT_NON_CONNECTABLE,
-        enable ? ESP_BT_GENERAL_DISCOVERABLE : ESP_BT_NON_DISCOVERABLE);
-    if (ret != ESP_OK)
-    {
-        ESP_LOGW(GAP_TAG, "Set scanner discoverability %s failed: %s",
-                 enable ? "enabled" : "disabled",
-                 esp_err_to_name(ret));
-    }
-    return ret;
+    return NULL;
 }
 
 static void classic_scan_start(void)
 {
-    scanner_mutex_lock();
-    bool can_start = g_scan_enabled && !g_classic_discovering;
-    if (can_start)
-    {
-        m_dev_info.state = APP_GAP_STATE_DEVICE_DISCOVERING;
-    }
-    scanner_mutex_unlock();
-
-    if (!can_start)
+    if (!g_scan_enabled || g_classic_discovering)
     {
         return;
     }
 
+    app_gap_cb_t *p_dev = &m_dev_info;
+    p_dev->state = APP_GAP_STATE_DEVICE_DISCOVERING;
+
     esp_err_t ret = esp_bt_gap_start_discovery(ESP_BT_INQ_MODE_GENERAL_INQUIRY, 48, 0);
     if (ret == ESP_OK)
     {
-        scanner_mutex_lock();
         g_classic_discovering = true;
-        scanner_mutex_unlock();
     }
     else
     {
@@ -516,14 +388,7 @@ static void classic_scan_stop(void)
 
 static void ble_scan_start(void)
 {
-    scanner_mutex_lock();
-    bool can_start = g_scan_enabled &&
-                     g_ble_scan_params_ready &&
-                     !g_ble_scanning &&
-                     !g_ble_scan_start_pending;
-    scanner_mutex_unlock();
-
-    if (!can_start)
+    if (!g_scan_enabled || !g_ble_scan_params_ready || g_ble_scanning || g_ble_scan_start_pending)
     {
         return;
     }
@@ -531,9 +396,7 @@ static void ble_scan_start(void)
     esp_err_t ret = esp_ble_gap_start_scanning(0);
     if (ret == ESP_OK)
     {
-        scanner_mutex_lock();
         g_ble_scan_start_pending = true;
-        scanner_mutex_unlock();
     }
     else if (ret != ESP_ERR_INVALID_STATE)
     {
@@ -543,11 +406,7 @@ static void ble_scan_start(void)
 
 static void ble_scan_stop(void)
 {
-    scanner_mutex_lock();
-    bool can_stop = g_ble_scan_params_ready && !g_ble_scan_stop_pending;
-    scanner_mutex_unlock();
-
-    if (!can_stop)
+    if (!g_ble_scan_params_ready || g_ble_scan_stop_pending)
     {
         return;
     }
@@ -555,9 +414,7 @@ static void ble_scan_stop(void)
     esp_err_t ret = esp_ble_gap_stop_scanning();
     if (ret == ESP_OK)
     {
-        scanner_mutex_lock();
         g_ble_scan_stop_pending = true;
-        scanner_mutex_unlock();
     }
     else if (ret != ESP_ERR_INVALID_STATE)
     {
@@ -633,110 +490,51 @@ static void log_ble_service_uuids(uint8_t *adv_data, uint16_t adv_len)
 /* ── ESP-NOW helpers ────────────────────────────────────────────────────── */
 
 /*
- * build_device_command_locked() - pack a device_entry_t into a command_t.
- * Caller must hold g_scanner_mutex while reading the device entry.
+ * send_device_over_espnow() - pack a device_entry_t into a command_t and
+ * fire it over ESP-NOW to the attack ESP32.  Fire-and-forget: errors are
+ * logged but do not affect the scan loop.
  */
-static void build_device_command_locked(const device_entry_t *entry, command_t *cmd)
+static void send_device_over_espnow(device_entry_t *entry)
 {
-    memset(cmd, 0, sizeof(*cmd));
+    command_t cmd;
+    memset(&cmd, 0, sizeof(cmd));
+    cmd.version = 0x01;
 
-    cmd->version = ESPNOW_PROTO_VERSION;
-    cmd->cmd_id = CMD_SEND_DEVICE;
+    cmd.cmd_id = CMD_SEND_DEVICE;
 
     /* BD_ADDR */
-    memcpy(cmd->payload.device.bda, entry->bda, sizeof(cmd->payload.device.bda));
+    memcpy(cmd.payload.device.bda, entry->bda, sizeof(cmd.payload.device.bda));
 
     /* Name - device_info_t.name is char[32]; bdname is uint8_t[] */
-    size_t name_len = entry->bdname_len < (sizeof(cmd->payload.device.name) - 1)
+    size_t name_len = entry->bdname_len < (sizeof(cmd.payload.device.name) - 1)
                           ? entry->bdname_len
-                          : sizeof(cmd->payload.device.name) - 1;
-    memcpy(cmd->payload.device.name, entry->bdname, name_len);
-    cmd->payload.device.name[name_len] = '\0';
+                          : sizeof(cmd.payload.device.name) - 1;
+    memcpy(cmd.payload.device.name, entry->bdname, name_len);
+    cmd.payload.device.name[name_len] = '\0';
 
-    cmd->payload.device.rssi = entry->rssi;
-    cmd->payload.device.cod = entry->cod;
-    cmd->payload.device.type = entry->type;
-    cmd->payload.device.tx_power = entry->tx_power;
-    cmd->payload.device.company_id = entry->company_id;
-    strncpy(cmd->payload.device.vendor, entry->vendor, sizeof(cmd->payload.device.vendor) - 1);
-    cmd->payload.device.vendor[sizeof(cmd->payload.device.vendor) - 1] = '\0';
-}
+    cmd.payload.device.rssi = entry->rssi;
+    cmd.payload.device.cod = entry->cod;
+    cmd.payload.device.type = entry->type;
+    cmd.payload.device.tx_power = entry->tx_power;
+    cmd.payload.device.company_id = entry->company_id;
+    strncpy(cmd.payload.device.vendor, entry->vendor, sizeof(cmd.payload.device.vendor) - 1);
+    cmd.payload.device.vendor[sizeof(cmd.payload.device.vendor) - 1] = '\0';
 
-static void enqueue_device_command(const command_t *cmd)
-{
-    if (!g_espnow_queue)
-    {
-        ESP_LOGW(TAG, "ESP-NOW queue unavailable, dropping device");
-        return;
-    }
-
-    if (xQueueSend(g_espnow_queue, cmd, 0) != pdTRUE)
-    {
-        ESP_LOGW(TAG, "ESP-NOW queue full, dropping device");
-    }
-}
-
-/*
- * send_device_over_espnow() - fire a packed command_t over ESP-NOW to the
- * attack ESP32.  Errors are returned so espnow_forward_task() can retry.
- */
-static esp_err_t send_device_over_espnow(const command_t *cmd)
-{
-    esp_err_t ret = esp_now_send(s_attack_mac, (const uint8_t *)cmd, sizeof(*cmd));
-
-    scanner_mutex_lock();
-    bool show_table = g_show_table;
-    scanner_mutex_unlock();
-
+    esp_err_t ret = esp_now_send(s_attack_mac, (const uint8_t *)&cmd, sizeof(cmd));
     if (ret == ESP_OK)
     {
 #if SCANNER_DEBUG
-        if (!show_table)
+        if (!g_show_table)
         {
             ESP_LOGI(TAG, "ESP-NOW sent device %02x:%02x:%02x:%02x:%02x:%02x",
-                     cmd->payload.device.bda[0], cmd->payload.device.bda[1],
-                     cmd->payload.device.bda[2], cmd->payload.device.bda[3],
-                     cmd->payload.device.bda[4], cmd->payload.device.bda[5]);
+                     entry->bda[0], entry->bda[1], entry->bda[2],
+                     entry->bda[3], entry->bda[4], entry->bda[5]);
         }
 #endif
     }
     else
     {
         ESP_LOGW(TAG, "ESP-NOW send failed: %s", esp_err_to_name(ret));
-    }
-
-    return ret;
-}
-
-static void espnow_forward_task(void *arg)
-{
-    (void)arg;
-    command_t cmd;
-
-    while (1)
-    {
-        if (xQueueReceive(g_espnow_queue, &cmd, portMAX_DELAY) != pdTRUE)
-        {
-            continue;
-        }
-
-        for (int attempt = 0; attempt < ESPNOW_SEND_MAX_ATTEMPTS; attempt++)
-        {
-            esp_err_t ret = send_device_over_espnow(&cmd);
-            if (ret == ESP_OK)
-            {
-                break;
-            }
-
-            if (attempt + 1 < ESPNOW_SEND_MAX_ATTEMPTS)
-            {
-                vTaskDelay(pdMS_TO_TICKS(ESPNOW_RETRY_DELAY_MS));
-            }
-            else
-            {
-                ESP_LOGW(TAG, "ESP-NOW dropped device after %d attempts", ESPNOW_SEND_MAX_ATTEMPTS);
-            }
-        }
     }
 }
 
@@ -747,13 +545,16 @@ static void log_ble_scan_result(esp_ble_gap_cb_param_t *param)
     char bda_str[18];
     uint8_t name_len = 0;
     uint8_t *name_ptr = NULL;
-    command_t cmd;
-    bool should_enqueue = false;
-    bool is_new = false;
-    bool show_table = true;
-    int8_t rssi = 0;
-    char name_copy[ESP_BT_GAP_MAX_BDNAME_LEN + 1] = {0};
-    device_eviction_log_t eviction_log = {0};
+    device_entry_t *entry = find_or_create_device(param->scan_rst.bda);
+
+    if (!entry)
+    {
+        ESP_LOGW(TAG, "BLE device table full, dropping %s",
+                 bda2str(param->scan_rst.bda, bda_str, sizeof(bda_str)));
+        return;
+    }
+
+    bool is_new = entry->last_seen_ms == 0;
 
     /* ── Resolve device name ─────────────────────────────────────────────
      * The advertising data and scan response are stored in one contiguous
@@ -788,26 +589,12 @@ static void log_ble_scan_result(esp_ble_gap_cb_param_t *param)
             ESP_BLE_AD_TYPE_NAME_SHORT, &name_len);
     }
 
-    uint8_t *scan_rsp = param->scan_rst.ble_adv + param->scan_rst.adv_data_len;
-
-    /* Shared scanner state is protected while this callback updates g_devices and flags. */
-    scanner_mutex_lock();
-    device_entry_t *entry = find_or_create_device(param->scan_rst.bda, &eviction_log);
-    if (!entry)
-    {
-        scanner_mutex_unlock();
-        ESP_LOGW(TAG, "BLE device table full, dropping %s",
-                 bda2str(param->scan_rst.bda, bda_str, sizeof(bda_str)));
-        return;
-    }
-
-    is_new = entry->last_seen_ms == 0;
-
     if (name_ptr && name_len > 0)
     {
         update_entry_name(entry, name_ptr, name_len);
     }
 
+    uint8_t *scan_rsp = param->scan_rst.ble_adv + param->scan_rst.adv_data_len;
     update_ble_metadata(entry,
                         param->scan_rst.ble_adv,
                         param->scan_rst.adv_data_len,
@@ -822,36 +609,13 @@ static void log_ble_scan_result(esp_ble_gap_cb_param_t *param)
         entry->cod = 0;
     }
 
-    if (is_new)
-    {
-        g_new_device_blink_pending = true;
-    }
-
-    show_table = g_show_table;
-    rssi = entry->rssi;
-    if (entry->bdname_len > 0)
-    {
-        memcpy(name_copy, entry->bdname, entry->bdname_len);
-        name_copy[entry->bdname_len] = '\0';
-        sanitize_name((uint8_t *)name_copy, strlen(name_copy));
-    }
-    else
-    {
-        strncpy(name_copy, "(unknown)", sizeof(name_copy) - 1);
-    }
-    build_device_command_locked(entry, &cmd);
-    should_enqueue = true;
-    scanner_mutex_unlock();
-
-    log_device_eviction(&eviction_log);
-
-    if (!show_table)
+    if (!g_show_table)
     {
         ESP_LOGI(TAG, "%s: BLE %s RSSI=%d name=%s",
                  is_new ? "NEW" : "UPD",
                  bda2str(param->scan_rst.bda, bda_str, sizeof(bda_str)),
-                 (int)rssi,
-                 name_copy);
+                 (int)entry->rssi,
+                 entry->bdname_len > 0 ? (char *)entry->bdname : "(unknown)");
 
         /* ── Log service UUIDs ──────────────────────────────────────────
          * Search both parts of the contiguous buffer.
@@ -865,23 +629,23 @@ static void log_ble_scan_result(esp_ble_gap_cb_param_t *param)
         }
     }
 
-    if (should_enqueue)
+    if (is_new)
     {
-        enqueue_device_command(&cmd);
+        g_new_device_blink_pending = true;
     }
+
+    /* Forward device to attack ESP32 over ESP-NOW */
+    send_device_over_espnow(entry);
 }
 
 static void ble_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param)
 {
-    /* BLE callback state transitions are protected by g_scanner_mutex. */
     switch (event)
     {
     case ESP_GAP_BLE_SCAN_PARAM_SET_COMPLETE_EVT:
         if (param->scan_param_cmpl.status == ESP_BT_STATUS_SUCCESS)
         {
-            scanner_mutex_lock();
             g_ble_scan_params_ready = true;
-            scanner_mutex_unlock();
             ble_scan_start();
         }
         else
@@ -890,51 +654,31 @@ static void ble_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
         }
         break;
     case ESP_GAP_BLE_SCAN_START_COMPLETE_EVT:
-    {
-        bool should_stop = false;
-        scanner_mutex_lock();
         g_ble_scan_start_pending = false;
         if (param->scan_start_cmpl.status == ESP_BT_STATUS_SUCCESS)
         {
             g_ble_scanning = true;
-            should_stop = !g_scan_enabled;
-        }
-        else
-        {
-            g_ble_scanning = false;
-        }
-        scanner_mutex_unlock();
-
-        if (param->scan_start_cmpl.status == ESP_BT_STATUS_SUCCESS)
-        {
             ESP_LOGI(TAG, "BLE scan started.");
-            if (should_stop)
+            if (!g_scan_enabled)
             {
                 ble_scan_stop();
             }
         }
         else
         {
+            g_ble_scanning = false;
             ESP_LOGE(TAG, "BLE scan start failed: %d", param->scan_start_cmpl.status);
         }
         break;
-    }
     case ESP_GAP_BLE_SCAN_STOP_COMPLETE_EVT:
-    {
-        bool should_start = false;
-        scanner_mutex_lock();
         g_ble_scan_stop_pending = false;
         g_ble_scanning = false;
-        should_start = g_scan_enabled;
-        scanner_mutex_unlock();
-
         ESP_LOGI(TAG, "BLE scan stopped.");
-        if (should_start)
+        if (g_scan_enabled)
         {
             ble_scan_start();
         }
         break;
-    }
     case ESP_GAP_BLE_SCAN_RESULT_EVT:
         if (param->scan_rst.search_evt == ESP_GAP_SEARCH_INQ_RES_EVT)
         {
@@ -942,12 +686,8 @@ static void ble_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
         }
         else if (param->scan_rst.search_evt == ESP_GAP_SEARCH_INQ_CMPL_EVT)
         {
-            bool should_start = false;
-            scanner_mutex_lock();
             g_ble_scanning = false;
-            should_start = g_scan_enabled;
-            scanner_mutex_unlock();
-            if (should_start)
+            if (g_scan_enabled)
             {
                 ble_scan_start();
             }
@@ -967,14 +707,8 @@ static void update_device_info(esp_bt_gap_cb_param_t *param)
     uint8_t *bdname = NULL;
     uint8_t bdname_len = 0;
     uint8_t *eir = NULL;
-    size_t eir_len = 0;
+    uint8_t eir_len = 0;
     esp_bt_gap_dev_prop_t *p;
-    command_t cmd;
-    bool should_enqueue = false;
-    bool is_new = false;
-    bool show_table = true;
-    char name_copy[ESP_BT_GAP_MAX_BDNAME_LEN + 1] = {0};
-    device_eviction_log_t eviction_log = {0};
 
     for (int i = 0; i < param->disc_res.num_prop; i++)
     {
@@ -982,24 +716,10 @@ static void update_device_info(esp_bt_gap_cb_param_t *param)
         switch (p->type)
         {
         case ESP_BT_GAP_DEV_PROP_COD:
-            if (p->val && p->len >= 4)
-            {
-                memcpy(&cod, p->val, sizeof(cod));
-            }
-            else
-            {
-                ESP_LOGW(GAP_TAG, "Skipping malformed CoD property len=%d", (int)p->len);
-            }
+            cod = *(uint32_t *)(p->val);
             break;
         case ESP_BT_GAP_DEV_PROP_RSSI:
-            if (p->val && p->len >= 1)
-            {
-                rssi = *(int8_t *)(p->val);
-            }
-            else
-            {
-                ESP_LOGW(GAP_TAG, "Skipping malformed RSSI property len=%d", (int)p->len);
-            }
+            rssi = *(int8_t *)(p->val);
             break;
         case ESP_BT_GAP_DEV_PROP_BDNAME:
             bdname_len = (p->len > ESP_BT_GAP_MAX_BDNAME_LEN) ? ESP_BT_GAP_MAX_BDNAME_LEN : (uint8_t)p->len;
@@ -1016,8 +736,6 @@ static void update_device_info(esp_bt_gap_cb_param_t *param)
         }
     }
 
-    /* Shared scanner state is protected while this callback updates m_dev_info and g_devices. */
-    scanner_mutex_lock();
     app_gap_cb_t *p_dev = &m_dev_info;
 
     memcpy(p_dev->bda, param->disc_res.bda, ESP_BD_ADDR_LEN);
@@ -1030,44 +748,31 @@ static void update_device_info(esp_bt_gap_cb_param_t *param)
 
     if (bdname_len > 0)
     {
-        if (bdname_len > sizeof(p_dev->bdname) - 1)
-        {
-            bdname_len = sizeof(p_dev->bdname) - 1;
-        }
         memcpy(p_dev->bdname, bdname, bdname_len);
         p_dev->bdname[bdname_len] = '\0';
         p_dev->bdname_len = bdname_len;
     }
     if (eir_len > 0)
     {
-        if (eir_len > sizeof(p_dev->eir))
-        {
-            eir_len = sizeof(p_dev->eir);
-        }
         memcpy(p_dev->eir, eir, eir_len);
-        p_dev->eir_len = (uint8_t)eir_len;
+        p_dev->eir_len = eir_len;
     }
 
     if (p_dev->bdname_len == 0)
     {
         get_name_from_eir(p_dev->eir, p_dev->bdname, &p_dev->bdname_len);
     }
-    if (p_dev->bdname_len > 0)
-    {
-        sanitize_name(p_dev->bdname, p_dev->bdname_len);
-    }
 
-    device_entry_t *entry = find_or_create_device(param->disc_res.bda, &eviction_log);
+    device_entry_t *entry = find_or_create_device(param->disc_res.bda);
     if (!entry)
     {
-        p_dev->state = APP_GAP_STATE_DEVICE_DISCOVER_COMPLETE;
-        scanner_mutex_unlock();
         ESP_LOGW(GAP_TAG, "Classic device table full, dropping %s",
                  bda2str(param->disc_res.bda, bda_str, sizeof(bda_str)));
+        p_dev->state = APP_GAP_STATE_DEVICE_DISCOVER_COMPLETE;
         return;
     }
 
-    is_new = entry->last_seen_ms == 0;
+    bool is_new = entry->last_seen_ms == 0;
     entry->last_seen_ms = get_now_ms();
     entry->rssi = rssi;
     entry->cod = cod;
@@ -1077,61 +782,41 @@ static void update_device_info(esp_bt_gap_cb_param_t *param)
         update_entry_name(entry, p_dev->bdname, p_dev->bdname_len);
     }
 
+    if (!g_show_table)
+    {
+        ESP_LOGI(GAP_TAG, "%s: Classic %s RSSI=%d COD=0x%" PRIx32 " name=%s",
+                 is_new ? "NEW" : "UPD",
+                 bda2str(param->disc_res.bda, bda_str, sizeof(bda_str)),
+                 (int)entry->rssi,
+                 entry->cod,
+                 entry->bdname_len > 0 ? (char *)entry->bdname : "(unknown)");
+    }
+
     if (is_new)
     {
         g_new_device_blink_pending = true;
     }
 
-    show_table = g_show_table;
-    if (entry->bdname_len > 0)
-    {
-        memcpy(name_copy, entry->bdname, entry->bdname_len);
-        name_copy[entry->bdname_len] = '\0';
-        sanitize_name((uint8_t *)name_copy, strlen(name_copy));
-    }
-    else
-    {
-        strncpy(name_copy, "(unknown)", sizeof(name_copy) - 1);
-    }
-    build_device_command_locked(entry, &cmd);
-    should_enqueue = true;
+    /* Forward device to attack ESP32 over ESP-NOW */
+    send_device_over_espnow(entry);
 
     p_dev->state = APP_GAP_STATE_DEVICE_DISCOVER_COMPLETE;
-    scanner_mutex_unlock();
-
-    log_device_eviction(&eviction_log);
-
-    if (!show_table)
-    {
-        ESP_LOGI(GAP_TAG, "%s: Classic %s RSSI=%d COD=0x%" PRIx32 " name=%s",
-                 is_new ? "NEW" : "UPD",
-                 bda2str(param->disc_res.bda, bda_str, sizeof(bda_str)),
-                 (int)rssi,
-                 cod,
-                 name_copy);
-    }
-
-    if (should_enqueue)
-    {
-        enqueue_device_command(&cmd);
-    }
 }
 
 static void bt_app_gap_init(void)
 {
-    scanner_mutex_lock();
-    memset(&m_dev_info, 0, sizeof(app_gap_cb_t));
+    app_gap_cb_t *p_dev = &m_dev_info;
+    memset(p_dev, 0, sizeof(app_gap_cb_t));
 
-    m_dev_info.state = APP_GAP_STATE_IDLE;
-    scanner_mutex_unlock();
+    p_dev->state = APP_GAP_STATE_IDLE;
 }
 
 static void bt_app_gap_cb(esp_bt_gap_cb_event_t event, esp_bt_gap_cb_param_t *param)
 {
+    app_gap_cb_t *p_dev = &m_dev_info;
     char bda_str[18];
     char uuid_str[37];
 
-    /* Classic GAP callback state transitions are protected by g_scanner_mutex. */
     switch (event)
     {
     case ESP_BT_GAP_DISC_RES_EVT:
@@ -1143,14 +828,9 @@ static void bt_app_gap_cb(esp_bt_gap_cb_event_t event, esp_bt_gap_cb_param_t *pa
     {
         if (param->disc_st_chg.state == ESP_BT_GAP_DISCOVERY_STOPPED)
         {
-            bool should_start = false;
-            scanner_mutex_lock();
             g_classic_discovering = false;
-            should_start = g_scan_enabled;
-            scanner_mutex_unlock();
-
             ESP_LOGI(GAP_TAG, "Device discovery stopped.");
-            if (should_start)
+            if (g_scan_enabled)
             {
                 classic_scan_start();
             }
@@ -1161,15 +841,10 @@ static void bt_app_gap_cb(esp_bt_gap_cb_event_t event, esp_bt_gap_cb_param_t *pa
         }
         else if (param->disc_st_chg.state == ESP_BT_GAP_DISCOVERY_STARTED)
         {
-            bool should_stop = false;
-            scanner_mutex_lock();
             g_scan_cycle_count++;
             g_classic_discovering = true;
-            should_stop = !g_scan_enabled;
-            scanner_mutex_unlock();
-
             ESP_LOGI(GAP_TAG, "Discovery started.");
-            if (should_stop)
+            if (!g_scan_enabled)
             {
                 classic_scan_stop();
             }
@@ -1178,24 +853,13 @@ static void bt_app_gap_cb(esp_bt_gap_cb_event_t event, esp_bt_gap_cb_param_t *pa
     }
     case ESP_BT_GAP_RMT_SRVCS_EVT:
     {
-        esp_bd_addr_t service_bda = {0};
-        bool service_event_matches = false;
-
-        scanner_mutex_lock();
-        if (memcmp(param->rmt_srvcs.bda, m_dev_info.bda, ESP_BD_ADDR_LEN) == 0 &&
-            m_dev_info.state == APP_GAP_STATE_SERVICE_DISCOVERING)
+        if (memcmp(param->rmt_srvcs.bda, p_dev->bda, ESP_BD_ADDR_LEN) == 0 &&
+            p_dev->state == APP_GAP_STATE_SERVICE_DISCOVERING)
         {
-            m_dev_info.state = APP_GAP_STATE_SERVICE_DISCOVER_COMPLETE;
-            memcpy(service_bda, m_dev_info.bda, ESP_BD_ADDR_LEN);
-            service_event_matches = true;
-        }
-        scanner_mutex_unlock();
-
-        if (service_event_matches)
-        {
+            p_dev->state = APP_GAP_STATE_SERVICE_DISCOVER_COMPLETE;
             if (param->rmt_srvcs.stat == ESP_BT_STATUS_SUCCESS)
             {
-                ESP_LOGI(GAP_TAG, "Services for device %s found", bda2str(service_bda, bda_str, sizeof(bda_str)));
+                ESP_LOGI(GAP_TAG, "Services for device %s found", bda2str(p_dev->bda, bda_str, sizeof(bda_str)));
                 for (int i = 0; i < param->rmt_srvcs.num_uuids; i++)
                 {
                     esp_bt_uuid_t *u = param->rmt_srvcs.uuid_list + i;
@@ -1204,7 +868,7 @@ static void bt_app_gap_cb(esp_bt_gap_cb_event_t event, esp_bt_gap_cb_param_t *pa
             }
             else
             {
-                ESP_LOGI(GAP_TAG, "Services for device %s not found", bda2str(service_bda, bda_str, sizeof(bda_str)));
+                ESP_LOGI(GAP_TAG, "Services for device %s not found", bda2str(p_dev->bda, bda_str, sizeof(bda_str)));
             }
         }
         break;
@@ -1220,74 +884,49 @@ static void bt_app_gap_cb(esp_bt_gap_cb_event_t event, esp_bt_gap_cb_param_t *pa
     return;
 }
 
-static bool bt_app_gap_start_up(void)
+static void bt_app_gap_start_up(void)
 {
     /* register GAP callback function */
-    esp_err_t ret = esp_bt_gap_register_callback(bt_app_gap_cb);
-    if (ret != ESP_OK)
-    {
-        ESP_LOGE(GAP_TAG, "Classic GAP callback register failed: %s", esp_err_to_name(ret));
-        return false;
-    }
+    esp_bt_gap_register_callback(bt_app_gap_cb);
 
     char *dev_name = "ESP_GAP_INQUIRY";
-    ret = esp_bt_gap_set_device_name(dev_name);
-    if (ret != ESP_OK)
-    {
-        ESP_LOGW(GAP_TAG, "Set Classic device name failed: %s", esp_err_to_name(ret));
-    }
+    esp_bt_gap_set_device_name(dev_name);
 
-    scanner_mutex_lock();
-    bool active_scan = g_ble_active_scan;
-    scanner_mutex_unlock();
-    (void)set_scanner_discoverability(active_scan);
+    /* set discoverable and connectable mode, wait to be connected */
+    esp_bt_gap_set_scan_mode(ESP_BT_CONNECTABLE, ESP_BT_GENERAL_DISCOVERABLE);
 
     /* initialize device information and status */
     bt_app_gap_init();
 
     /* start to discover nearby Bluetooth devices */
     classic_scan_start();
-    return true;
 }
 
 static void ble_set_scan_type(bool active)
 {
-    scanner_mutex_lock();
     g_ble_active_scan = active;
     g_ble_scan_params_ready = false;
-    bool was_scanning = g_ble_scanning;
-    scanner_mutex_unlock();
 
     // Stop any running scan
-    if (was_scanning)
+    if (g_ble_scanning)
     {
-        esp_err_t stop_ret = esp_ble_gap_stop_scanning();
-        if (stop_ret == ESP_OK)
-        {
-            scanner_mutex_lock();
-            g_ble_scan_stop_pending = true;
-            scanner_mutex_unlock();
-        }
-        else if (stop_ret != ESP_ERR_INVALID_STATE)
-        {
-            ESP_LOGW(TAG, "BLE scan stop before type change failed: %s", esp_err_to_name(stop_ret));
-        }
+        esp_ble_gap_stop_scanning();
         // Wait for stop to complete - a small delay is sufficient
         vTaskDelay(pdMS_TO_TICKS(200));
     }
 
     // Update the parameter
-    esp_ble_scan_params_t scan_params;
-    scanner_mutex_lock();
     ble_scan_params.scan_type = active ? BLE_SCAN_TYPE_ACTIVE : BLE_SCAN_TYPE_PASSIVE;
-    scan_params = ble_scan_params;
-    scanner_mutex_unlock();
 
-    // Re-register and start when ESP_GAP_BLE_SCAN_PARAM_SET_COMPLETE_EVT fires
-    esp_err_t ret = esp_ble_gap_set_scan_params(&scan_params);
-    if (ret != ESP_OK)
+    // Re‑register and start
+    esp_err_t ret = esp_ble_gap_set_scan_params(&ble_scan_params);
+    if (ret == ESP_OK)
     {
-        ESP_LOGE(TAG, "BLE scan params set for type change failed: %s", esp_err_to_name(ret));
+        g_ble_scan_params_ready = true;
+        if (g_scan_enabled)
+        {
+            ble_scan_start();
+        }
     }
 }
 
@@ -1300,11 +939,7 @@ static void ble_app_gap_start_up(void)
         return;
     }
 
-    scanner_mutex_lock();
-    esp_ble_scan_params_t scan_params = ble_scan_params;
-    scanner_mutex_unlock();
-
-    ret = esp_ble_gap_set_scan_params(&scan_params);
+    ret = esp_ble_gap_set_scan_params(&ble_scan_params);
     if (ret != ESP_OK)
     {
         ESP_LOGE(TAG, "BLE scan params set failed: %s", esp_err_to_name(ret));
@@ -1315,7 +950,6 @@ static void dashboard_task(void *arg)
 {
     (void)arg;
     char bda_str[18];
-    static device_entry_t dashboard_snapshot[MAX_TRACKED_DEVICES];
 
     /* Fixed-width columns */
     const int COL_MAC = 17;
@@ -1330,18 +964,7 @@ static void dashboard_task(void *arg)
 
     while (1)
     {
-        /* Dashboard copies shared scanner state while g_scanner_mutex is held. */
-        scanner_mutex_lock();
-        bool show_table = g_show_table;
-        uint32_t scan_cycle_count = g_scan_cycle_count;
-        bool ble_active_scan = g_ble_active_scan;
-        if (show_table)
-        {
-            memcpy(dashboard_snapshot, g_devices, sizeof(dashboard_snapshot));
-        }
-        scanner_mutex_unlock();
-
-        if (show_table)
+        if (g_show_table)
         {
             uint32_t now_ms = get_now_ms();
             uint32_t displayed_rows = 0;
@@ -1352,7 +975,7 @@ static void dashboard_task(void *arg)
 
             for (int i = 0; i < MAX_TRACKED_DEVICES; i++)
             {
-                device_entry_t *entry = &dashboard_snapshot[i];
+                device_entry_t *entry = &g_devices[i];
                 if (!entry->in_use)
                     continue;
 
@@ -1399,9 +1022,9 @@ static void dashboard_task(void *arg)
 
             // Scan indicator
             printf("│ Scan #%-3" PRIu32 " - %-*s │\n",
-                   scan_cycle_count,
+                   g_scan_cycle_count,
                    content_width - 12,
-                   ble_active_scan ? "ACTIVE (names/UUIDs)" : "PASSIVE (stealth)");
+                   g_ble_active_scan ? "ACTIVE (names/UUIDs)" : "PASSIVE (stealth)");
 
             // Header row
             printf("│ %s │\n", header);
@@ -1415,7 +1038,7 @@ static void dashboard_task(void *arg)
             /* 4. Device rows */
             for (int i = 0; i < MAX_TRACKED_DEVICES; i++)
             {
-                device_entry_t *entry = &dashboard_snapshot[i];
+                device_entry_t *entry = &g_devices[i];
                 if (!entry->in_use)
                     continue;
 
@@ -1433,28 +1056,13 @@ static void dashboard_task(void *arg)
                 const char *type = is_classic ? "Classic" : "BLE";
                 const char *row_color = is_classic ? A_GREEN : A_CYAN;
 
-                char display_name[ESP_BT_GAP_MAX_BDNAME_LEN + 1] = {0};
-                if (entry->bdname_len > 0)
-                {
-                    size_t display_name_len = entry->bdname_len;
-                    if (display_name_len > sizeof(display_name) - 1)
-                    {
-                        display_name_len = sizeof(display_name) - 1;
-                    }
-                    memcpy(display_name, entry->bdname, display_name_len);
-                    display_name[display_name_len] = '\0';
-                    sanitize_name((uint8_t *)display_name, display_name_len);
-                }
-                else
-                {
-                    strncpy(display_name, "(unknown)", sizeof(display_name) - 1);
-                }
-                const char *name = display_name;
+                const char *name = entry->bdname_len > 0
+                                       ? (char *)entry->bdname
+                                       : "(unknown)";
 
                 char age_str[16];
                 snprintf(age_str, sizeof(age_str), "%" PRIu32 "s", age_ms / 1000);
 
-                /* CoD labels are resolved by the CrowPanel dashboard from an SD-card database.  This scanner only collects raw data. */
                 char class_str[16];
                 if (entry->cod != 0)
                 {
@@ -1517,7 +1125,6 @@ static void dashboard_task(void *arg)
 
 static void scan_control_task(void *arg)
 {
-    (void)arg;
     char buf[32];
     while (1)
     {
@@ -1525,33 +1132,24 @@ static void scan_control_task(void *arg)
         {
             if (strncmp(buf, "stop", 4) == 0)
             {
-                /* Command task updates shared scanner flags while g_scanner_mutex is held. */
-                scanner_mutex_lock();
                 g_scan_enabled = false;
-                scanner_mutex_unlock();
                 classic_scan_stop();
                 ble_scan_stop();
                 printf("Scan stopped.\n");
             }
             else if (strncmp(buf, "table on", 8) == 0)
             {
-                scanner_mutex_lock();
                 g_show_table = true;
-                scanner_mutex_unlock();
             }
             else if (strncmp(buf, "table off", 9) == 0)
             {
-                scanner_mutex_lock();
                 g_show_table = false;
-                scanner_mutex_unlock();
                 printf("\033[2J\033[H");
                 printf("Raw log view enabled.\n");
             }
             else if (strncmp(buf, "start", 5) == 0)
             {
-                scanner_mutex_lock();
                 g_scan_enabled = true;
-                scanner_mutex_unlock();
                 classic_scan_start();
                 ble_scan_start();
                 printf("Scan started.\n");
@@ -1559,21 +1157,17 @@ static void scan_control_task(void *arg)
             else if (strncmp(buf, "active", 6) == 0)
             {
                 ble_set_scan_type(true);
-                (void)set_scanner_discoverability(true);
                 printf("BLE scan: ACTIVE  (requests names & UUIDs - visible)\n");
             }
             else if (strncmp(buf, "passive", 7) == 0)
             {
                 ble_set_scan_type(false);
-                (void)set_scanner_discoverability(false);
                 printf("BLE scan: PASSIVE (listen‑only - stealth)\n");
             }
             else if (buf[0] != '\n' && buf[0] != '\r' && buf[0] != '\0')
             {
-                scanner_mutex_lock();
                 bool was_showing = g_show_table;
                 g_show_table = false;
-                scanner_mutex_unlock();
 
                 printf("\nUnknown command: %s\n", buf);
                 printf("Available commands:\n");
@@ -1593,9 +1187,7 @@ static void scan_control_task(void *arg)
 
                 if (was_showing)
                 {
-                    scanner_mutex_lock();
                     g_show_table = true;
-                    scanner_mutex_unlock();
                 }
             }
         }
@@ -1613,12 +1205,7 @@ static void scan_control_task(void *arg)
 static void espnow_send_cb(const esp_now_send_info_t *tx_info, esp_now_send_status_t status)
 {
     (void)tx_info;
-    /* ESP-NOW callback reads shared display state while g_scanner_mutex is held. */
-    scanner_mutex_lock();
-    bool show_table = g_show_table;
-    scanner_mutex_unlock();
-
-    if (status != ESP_NOW_SEND_SUCCESS && !show_table)
+    if (status != ESP_NOW_SEND_SUCCESS && !g_show_table)
     {
         ESP_LOGW(TAG, "ESP-NOW send callback: delivery failed");
     }
@@ -1655,8 +1242,6 @@ static void espnow_init(void)
     ESP_ERROR_CHECK(esp_wifi_init(&wifi_cfg));
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
     ESP_ERROR_CHECK(esp_wifi_start());
-    /* Wi-Fi channel 1 (2412 MHz) - avoids interference with Bluetooth which hops across 2402-2480 MHz. */
-    ESP_ERROR_CHECK(esp_wifi_set_channel(ESPNOW_CHANNEL, WIFI_SECOND_CHAN_NONE));
 
     ESP_ERROR_CHECK(esp_now_init());
     ESP_ERROR_CHECK(esp_now_register_send_cb(espnow_send_cb));
@@ -1665,7 +1250,7 @@ static void espnow_init(void)
     esp_now_peer_info_t peer;
     memset(&peer, 0, sizeof(peer));
     memcpy(peer.peer_addr, s_attack_mac, sizeof(peer.peer_addr));
-    peer.channel = ESPNOW_CHANNEL;
+    peer.channel = 0;
     peer.encrypt = false;
 
     ESP_ERROR_CHECK(esp_now_add_peer(&peer));
@@ -1688,61 +1273,36 @@ void app_main(void)
     }
     ESP_ERROR_CHECK(ret);
     scan_led_init();
-    ESP_LOGI(TAG, "Free internal heap: %u bytes",
-             (unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL));
-    ESP_LOGI(TAG, "Free PSRAM heap: %u bytes",
-             (unsigned)heap_caps_get_free_size(MALLOC_CAP_SPIRAM));
-
-    g_scanner_mutex = xSemaphoreCreateMutex();
-    if (!g_scanner_mutex)
-    {
-        ESP_LOGE(TAG, "Failed to create scanner mutex");
-        return;
-    }
-
-    g_espnow_queue = xQueueCreate(ESPNOW_QUEUE_DEPTH, sizeof(command_t));
-    if (!g_espnow_queue)
-    {
-        ESP_LOGE(TAG, "Failed to create ESP-NOW queue");
-        return;
-    }
-
-    bool bt_controller_initialized = false;
-    bool bt_controller_enabled = false;
-    bool bluedroid_initialized = false;
-    bool bluedroid_enabled = false;
 
     esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
     if ((ret = esp_bt_controller_init(&bt_cfg)) != ESP_OK)
     {
         ESP_LOGE(GAP_TAG, "%s initialize controller failed: %s", __func__, esp_err_to_name(ret));
-        goto cleanup;
+        return;
     }
-    bt_controller_initialized = true;
 
     if ((ret = esp_bt_controller_enable(ESP_BT_MODE_BTDM)) != ESP_OK)
     {
         ESP_LOGE(GAP_TAG, "%s enable controller failed: %s", __func__, esp_err_to_name(ret));
-        goto cleanup;
+        return;
     }
-    bt_controller_enabled = true;
 
     esp_bluedroid_config_t bluedroid_cfg = BT_BLUEDROID_INIT_CONFIG_DEFAULT();
     if ((ret = esp_bluedroid_init_with_cfg(&bluedroid_cfg)) != ESP_OK)
     {
         ESP_LOGE(GAP_TAG, "%s initialize bluedroid failed: %s", __func__, esp_err_to_name(ret));
-        goto cleanup;
+        return;
     }
-    bluedroid_initialized = true;
 
     if ((ret = esp_bluedroid_enable()) != ESP_OK)
     {
         ESP_LOGE(GAP_TAG, "%s enable bluedroid failed: %s", __func__, esp_err_to_name(ret));
-        goto cleanup;
+        return;
     }
-    bluedroid_enabled = true;
 
     ESP_LOGI(GAP_TAG, "Own address:[%s]", bda2str((uint8_t *)esp_bt_dev_get_address(), bda_str, sizeof(bda_str)));
+    bt_app_gap_start_up();
+    ble_app_gap_start_up();
 
     /* Install UART driver and switch stdin to blocking mode so that
      * fgets() in scan_control_task blocks on each read rather than
@@ -1753,72 +1313,7 @@ void app_main(void)
     /* Bring up ESP-NOW (Wi-Fi STA + peer registration) */
     espnow_init();
 
-    /* ESP-NOW forwarder uses 3072 bytes for queued send retries and logging. */
-    if (xTaskCreate(espnow_forward_task, "espnow_fwd", 3072, NULL, 1, NULL) != pdPASS)
-    {
-        ESP_LOGE(TAG, "Failed to create task: espnow_fwd");
-        return;
-    }
-
-    if (!bt_app_gap_start_up())
-    {
-        return;
-    }
-    ble_app_gap_start_up();
-
-    /* LED task uses 1024 bytes; it only toggles GPIO and checks shared flags. */
-    if (xTaskCreate(scan_led_task, "scan_led", 1024, NULL, 1, NULL) != pdPASS)
-    {
-        ESP_LOGE(TAG, "Failed to create task: scan_led");
-        return;
-    }
-
-    /* Command task uses 3072 bytes for blocking UART fgets() and command logging. */
-    if (xTaskCreate(scan_control_task, "scan_ctrl", 3072, NULL, 1, NULL) != pdPASS)
-    {
-        ESP_LOGE(TAG, "Failed to create task: scan_ctrl");
-        return;
-    }
-
-    /* Dashboard task uses 4096 bytes for repeated printf/snprintf rendering. */
-    if (xTaskCreate(dashboard_task, "dashboard", 4096, NULL, 1, NULL) != pdPASS)
-    {
-        ESP_LOGE(TAG, "Failed to create task: dashboard");
-        return;
-    }
-    return;
-
-cleanup:
-    if (bluedroid_enabled)
-    {
-        esp_err_t cleanup_ret = esp_bluedroid_disable();
-        if (cleanup_ret != ESP_OK)
-        {
-            ESP_LOGW(GAP_TAG, "Bluedroid disable cleanup failed: %s", esp_err_to_name(cleanup_ret));
-        }
-    }
-    if (bluedroid_initialized)
-    {
-        esp_err_t cleanup_ret = esp_bluedroid_deinit();
-        if (cleanup_ret != ESP_OK)
-        {
-            ESP_LOGW(GAP_TAG, "Bluedroid deinit cleanup failed: %s", esp_err_to_name(cleanup_ret));
-        }
-    }
-    if (bt_controller_enabled)
-    {
-        esp_err_t cleanup_ret = esp_bt_controller_disable();
-        if (cleanup_ret != ESP_OK)
-        {
-            ESP_LOGW(GAP_TAG, "BT controller disable cleanup failed: %s", esp_err_to_name(cleanup_ret));
-        }
-    }
-    if (bt_controller_initialized)
-    {
-        esp_err_t cleanup_ret = esp_bt_controller_deinit();
-        if (cleanup_ret != ESP_OK)
-        {
-            ESP_LOGW(GAP_TAG, "BT controller deinit cleanup failed: %s", esp_err_to_name(cleanup_ret));
-        }
-    }
+    xTaskCreate(scan_led_task, "scan_led", 1024, NULL, 1, NULL);
+    xTaskCreate(scan_control_task, "scan_ctrl", 2048, NULL, 1, NULL);
+    xTaskCreate(dashboard_task, "dashboard", 2048, NULL, 1, NULL);
 }
